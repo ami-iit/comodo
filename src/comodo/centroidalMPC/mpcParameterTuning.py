@@ -12,7 +12,7 @@ class MPCParameterTuning():
     def set_parameters(self, com_weight, contac_position, force_rate_change, angular_mom_weight,contact_force_symmetry_weight ): 
         self.com_weight = com_weight
         self.contact_position_weight = contac_position
-        self.fore_rate_change_weight = force_rate_change
+        self.force_rate_change_weight = force_rate_change
         self.angular_momentum_weight = angular_mom_weight
 
     def set_from_xk(self,x_k): 

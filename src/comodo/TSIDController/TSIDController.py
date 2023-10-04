@@ -1,5 +1,5 @@
-from include.abstractClasses.controller import Controller
-from include.TSIDController.TSIDParameterTuning import TSIDParameterTuning
+from comodo.abstractClasses.controller import Controller
+from comodo.TSIDController.TSIDParameterTuning import TSIDParameterTuning
 import bipedal_locomotion_framework as blf
 import numpy as np 
 import idyntree.bindings as iDynTree

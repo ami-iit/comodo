@@ -14,14 +14,14 @@ import xml.etree.ElementTree as ET
 
 class RobotModel(KinDynComputations):
    
-    def __init__(self, urdfstring: str,robot_name:str, joint_name_list:list, base_link:str = "root_link", left_foot:str= "left_sole", right_foot:str= "right_sole", torso:str= "chest") -> None:
+    def __init__(self, urdfstring: str,robot_name:str, joint_name_list:list, base_link:str = "root_link", left_foot:str= "l_sole", right_foot:str= "r_sole", torso:str= "chest") -> None:
         self.urdf_string = urdfstring
         self.robot_name = robot_name
         self.joint_name_list = joint_name_list
         self.base_link = base_link
         self.left_foot_frame = left_foot
         self.right_foot_frame = right_foot 
-        self.torso = torso        
+        self.torso_link = torso        
         
         self.remote_control_board_list = [
             "/" + self.robot_name + "/torso",
@@ -55,6 +55,66 @@ class RobotModel(KinDynComputations):
         kindyn.loadRobotModel(model_loader.model())
         return kindyn
 
+    def compute_desired_position_walking(self): 
+        # desired_knee = -1.22
+        desired_knee = -1. 
+        shoulder_roll = 0.251
+        elbow =  0.616
+      
+        p_opts = {}
+        s_opts = {'linear_solver':'ma27'}
+        self.solver = cs.Opti()
+        self.solver.solver("ipopt", p_opts,s_opts)
+
+        self.H_left_foot = self.forward_kinematics_fun(self.left_foot_frame)
+        self.H_right_foot = self.forward_kinematics_fun(self.right_foot_frame)
+        self.w_H_torso = self.forward_kinematics_fun(self.torso_link)
+        self.s = self.solver.variable(self.NDoF) # joint positions
+        self.quat_pose_b = self.solver.variable(7)
+        left_foot_pos = np.asarray([0.000267595,0.0801685, 0.0 ])
+        left_foot_rotation = np.eye(3)
+        right_foot_pos = np.asarray([-0.000139057,-0.0803188,0.0])
+        right_foot_rotation  = np.eye(3)
+        root_link_rotation = np.eye(3)
+        quat_to_transf = self.from_quaternion_to_matrix()
+        H_b = quat_to_transf(self.quat_pose_b)
+        H_left_foot = self.H_left_foot(H_b,self.s)
+        quat_left_foot = self.rotation_matrix_to_quaternion(H_left_foot[:3,:3])
+        H_right_foot = self.H_right_foot(H_b,self.s)
+        quat_right_foot = self.rotation_matrix_to_quaternion(H_right_foot[:3,:3])
+        H_torso = self.w_H_torso(H_b,self.s)
+        quat_torso = self.rotation_matrix_to_quaternion(H_torso[:3,:3])
+        reference_rotation  = np.asarray([1.0,0.0,0.0,0.0])
+
+        # self.solver.subject_to(cs.abs(self.s[11])> 0.05 )
+        # self.solver.subject_to(self.s[11]< -0.05)
+        # self.solver.subject_to(cs.abs(self.s[17])>0.05 )
+        # self.solver.subject_to(self.s[17]< -0.05)
+        self.solver.subject_to(self.s[17] == desired_knee)
+        self.solver.subject_to(self.s[11] == desired_knee)
+        self.solver.subject_to(self.s[3] == elbow)
+        self.solver.subject_to(self.s[7] == elbow)
+        self.solver.subject_to(self.s[1]== shoulder_roll)
+        self.solver.subject_to(self.s[5] == shoulder_roll)
+        self.solver.subject_to(self.s[9] == self.s[15])
+        # self.solver.subject_to(cs.norm_2(self.quat_pose_b[:4]) == 1.0)
+        self.solver.subject_to(H_left_foot[2,3] == 0.0)
+        self.solver.subject_to(H_right_foot[2,3]== 0.0)
+        self.solver.subject_to(quat_left_foot == reference_rotation)
+        self.solver.subject_to(quat_right_foot == reference_rotation)
+        self.solver.subject_to(quat_torso == reference_rotation)
+        cost_function = cs.sumsqr(self.s)
+        cost_function += cs.sumsqr(H_left_foot[:2,3] - left_foot_pos[:2])
+        cost_function += cs.sumsqr(H_right_foot[:2,3] - right_foot_pos[:2])
+        # cost_function += cs.sumsqr(self.s[11] - desired_knee)
+        # cost_function += cs.sumsqr(self.s[17] - desired_knee)
+        self.solver.minimize(cost_function)
+        self.sol = self.solver.solve()
+        s_return = np.array(self.sol.value(self.s))
+        quat_base_opt = np.array(self.sol.value(self.quat_pose_b))
+        H_b_return = quat_to_transf(quat_base_opt)
+        xyz_rpy = self.matrix_to_rpy(H_b_return)
+        return s_return, xyz_rpy, H_b_return
     def get_left_arm_from_joint_position(self, s):
         if(self.left_arm_indexes is None): 
             return None 

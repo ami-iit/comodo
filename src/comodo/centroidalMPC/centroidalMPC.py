@@ -1,11 +1,11 @@
-from include.abstractClasses.planner import Planner 
-from include.centroidalMPC.footPositionPlanner import FootPositionPlanner
+from comodo.abstractClasses.planner import Planner 
+from comodo.centroidalMPC.footPositionPlanner import FootPositionPlanner
 import bipedal_locomotion_framework as blf 
 from datetime import timedelta
 import idyntree.bindings as iDynTree
 import numpy as np
 import matplotlib.pyplot as plt
-from  include.centroidalMPC.mpcParameterTuning import MPCParameterTuning 
+from  comodo.centroidalMPC.mpcParameterTuning import MPCParameterTuning 
 
 class CentroidalMPC(Planner): 
     

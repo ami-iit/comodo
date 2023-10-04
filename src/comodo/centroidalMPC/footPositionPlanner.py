@@ -1,4 +1,4 @@
-from include.robotModel.robotModel import RobotModel
+from comodo.robotModel.robotModel import RobotModel
 import manifpy as manif
 import matplotlib.pyplot as plt 
 import numpy as np

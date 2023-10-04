@@ -1,6 +1,6 @@
-from include.abstractClasses.simulator import Simulator
-from include.gazeboClassicSimulator.robotInterface import robotInterface
-from include.gazeboClassicSimulator.gazeboLauncher import GazeboLauncher 
+from comodo.abstractClasses.simulator import Simulator
+from comodo.gazeboClassicSimulator.robotInterface import robotInterface
+from comodo.gazeboClassicSimulator.gazeboLauncher import GazeboLauncher 
 import copy
 
 class GazeboClassicSimulator(Simulator):

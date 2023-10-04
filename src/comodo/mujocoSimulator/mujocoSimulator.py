@@ -1,4 +1,4 @@
-from include.abstractClasses.simulator import Simulator
+from comodo.abstractClasses.simulator import Simulator
 import mujoco
 import math 
 import numpy as np 

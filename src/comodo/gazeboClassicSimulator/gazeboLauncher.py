@@ -1,7 +1,7 @@
 import subprocess
 import yarp
 import time
-from include.robotModel.robotModel import RobotModel
+from comodo.robotModel.robotModel import RobotModel
 from lxml import etree
 import numpy as np
 
