@@ -9,16 +9,14 @@ from comodo.TSIDController.TSIDController import TSIDController
 import xml.etree.ElementTree as ET
 import numpy as np
 import tempfile
-# from git import Repo
+from git import Repo
 
-## Defining the urdf path of both the startin, del and the modified one
-# common_path = os.path.dirname(os.path.abspath(__file__))
-urdf_path_original = "/home/carlotta/iit_ws/element_hardware-intelligence/Software/OptimizationControlAndHardware/models/model.urdf"
 # Getting stickbot urdf file
-# temp_dir = tempfile.TemporaryDirectory()
-# git_url = "https://github.com/icub-tech-iit/ergocub-gazebo-simulations.git"
-# Repo.clone_from(git_url, temp_dir.name)
-# urdf_path_original = temp_dir.name + "/models/stickBot/model.urdf"
+temp_dir = tempfile.TemporaryDirectory()
+git_url = "https://github.com/icub-tech-iit/ergocub-gazebo-simulations.git"
+Repo.clone_from(git_url, temp_dir.name)
+urdf_path_original = temp_dir.name + "/models/stickBot/model.urdf"
+
 # Load the URDF file
 tree = ET.parse(urdf_path_original)
 root = tree.getroot()

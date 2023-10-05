@@ -115,6 +115,7 @@ class RobotModel(KinDynComputations):
         H_b_return = quat_to_transf(quat_base_opt)
         xyz_rpy = self.matrix_to_rpy(H_b_return)
         return s_return, xyz_rpy, H_b_return
+
     def get_left_arm_from_joint_position(self, s):
         if(self.left_arm_indexes is None): 
             return None 
