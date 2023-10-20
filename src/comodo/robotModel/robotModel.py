@@ -62,7 +62,7 @@ class RobotModel(KinDynComputations):
         elbow =  0.616
       
         p_opts = {}
-        s_opts = {'linear_solver':'ma27'}
+        s_opts = {'linear_solver':'mumps'}
         self.solver = cs.Opti()
         self.solver.solver("ipopt", p_opts,s_opts)
 

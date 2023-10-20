@@ -71,7 +71,7 @@ class CentroidalMPC(Planner):
         self.mpc_param_handler.set_parameter_int("number_of_maximum_contacts",2)
         self.mpc_param_handler.set_parameter_int("number_of_slices",1)
         self.mpc_param_handler.set_parameter_float("static_friction_coefficient", 0.33)
-        self.mpc_param_handler.set_parameter_string("linear_solver", "ma97")
+        self.mpc_param_handler.set_parameter_string("linear_solver", "mumps")
 
         ## MPC Contact Hanlder
 
