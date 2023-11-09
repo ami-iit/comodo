@@ -100,7 +100,7 @@ class CentroidalMPC(Planner):
 
         self.mpc_param_handler.set_parameter_vector_float("com_weight", mpc_parameters.com_weight)
         self.mpc_param_handler.set_parameter_float("contact_position_weight", mpc_parameters.contact_position_weight)
-        self.mpc_param_handler.set_parameter_vector_float("force_rate_of_change_weight", mpc_parameters.fore_rate_change_weight)
+        self.mpc_param_handler.set_parameter_vector_float("force_rate_of_change_weight", mpc_parameters.force_rate_change_weight)
         self.mpc_param_handler.set_parameter_float("angular_momentum_weight", mpc_parameters.angular_momentum_weight)
    
         self.centroidal_mpc.initialize(self.mpc_param_handler)

@@ -1,8 +1,8 @@
 from adam.casadi.computations import KinDynComputations
 import numpy as np
-from urdfpy import URDF
-from urdfpy import Joint
-from urdfpy import Link
+from urchin import URDF
+from urchin import Joint
+from urchin import Link
 import mujoco
 import tempfile
 import xml.etree.ElementTree as ET
@@ -31,12 +31,14 @@ class RobotModel(KinDynComputations):
             "/" + self.robot_name + "/right_leg",
         ]
 
-        self.mujoco_lines_urdf = '<mujoco> <compiler discardvisual="false"/> </mujoco>'
+        # self.mujoco_lines_urdf = '<mujoco> <compiler discardvisual="false"/> </mujoco>'
         self.gravity = iDynTree.Vector3()
         self.gravity.zero()
         self.gravity.setVal(2, -9.81)
         self.H_b = iDynTree.Transform()
-        super().__init__(urdfstring, self.joint_name_list, self.base_link)
+        path_temp_xml = tempfile.NamedTemporaryFile(mode = 'w+')
+        path_temp_xml.write(urdfstring)
+        super().__init__(path_temp_xml.name, self.joint_name_list, self.base_link)
 
     def override_control_boar_list(self, remote_control_board_list:list): 
         self.remote_control_board_list = remote_control_board_list
@@ -172,6 +174,8 @@ class RobotModel(KinDynComputations):
         tempFileOut = tempfile.NamedTemporaryFile(mode = 'w+')
         tempFileOut.write(copy.deepcopy(self.urdf_string))
         robot = URDF.load(tempFileOut.name)
+
+        ## Adding floating joint to have floating base system 
         for item in robot.joints: 
             if item.name not in (self.joint_name_list): 
                 item.joint_type = "fixed"
@@ -183,7 +187,17 @@ class RobotModel(KinDynComputations):
         robot.save(temp_urdf.name)
         tree = ET.parse(temp_urdf.name)
         root = tree.getroot()
-
+        robot_el = None
+        for elem in root.iter(): 
+            if(elem.tag == 'robot'): 
+                robot_el = elem
+                break
+        ## Adding compiler discard visaul false for mujoco rendering 
+        mujoco_el = ET.Element("mujoco")
+        compiler_el = ET.Element("compiler")
+        compiler_el.set("discardvisual", "false")
+        mujoco_el.append(compiler_el)
+        robot_el.append(mujoco_el)
         # Convert the XML tree to a string
         robot_urdf_string_original = ET.tostring(root)
         # urdf_string_temp  = temp_urdf.read()
@@ -200,8 +214,8 @@ class RobotModel(KinDynComputations):
         # Adding the Motors
         tree = ET.parse(path_temp_xml)
         root = tree.getroot()
-        mujoco_elem = None
         
+        mujoco_elem = None
         for elem in root.iter():
             if elem.tag == 'mujoco':
                 mujoco_elem = elem
@@ -273,7 +287,7 @@ class RobotModel(KinDynComputations):
         asset_entry.append(new_material_entry)
 
         mujoco_elem.append(asset_entry)
-
+        
         ## Adding the floor 
         #   <geom name="floor" size="0 0 .05" type="plane" material="grid" condim="3"/>
         world_elem = None

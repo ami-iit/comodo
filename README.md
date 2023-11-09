@@ -29,8 +29,8 @@ To install you can use the following commands
 
 
 ```
-conda install -c conda-forge adam-robotics  idyntree bipedal-locomotion-framework mujoco mujoco-python numpy mujoco-python-viewer
-pip install git+https://github.com/CarlottaSartore/urdf-modifiers.git@scalar_modification
+conda install -c conda-forge adam-robotics idyntree bipedal-locomotion-framework mujoco==2.3 mujoco-python==2.3 numpy==1.22 mujoco-python-viewer matplotlib gitpython urchin networkx=3.1 urdf_py
+pip install --no-deps git+https://github.com/CarlottaSartore/urdf-modifiers.git@scalar_modification 
 pip install --no-deps -e .
 
 ```
