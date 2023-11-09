@@ -24,14 +24,21 @@ class GazeboLauncher:
         self.launch_and_check_yarp_server()
         self.initialized_control_board = False
 
-    def set_control_board_names(head_control_board:str, torso_control_board:str, left_arm_control_board:str, right_arm_control_board:str, left_leg_control_board:str, right_leg_control_board:str): 
+    def set_control_board_names(
+        head_control_board: str,
+        torso_control_board: str,
+        left_arm_control_board: str,
+        right_arm_control_board: str,
+        left_leg_control_board: str,
+        right_leg_control_board: str,
+    ):
         self.head_control_board = head_control_board
         self.torso_control_board = torso_control_board
-        self.left_arm_control_board =left_arm_control_board
+        self.left_arm_control_board = left_arm_control_board
         self.right_arm_control_board = right_arm_control_board
         self.left_leg_control_board = left_leg_control_board
         self.right_leg_control_board = right_leg_control_board
-        self.initialized_control_board = True 
+        self.initialized_control_board = True
 
     def write_clock_rpc_command(self, command):
         response = yarp.Bottle()
@@ -75,7 +82,7 @@ class GazeboLauncher:
         subprocess.Popen(["pkill", "gzserver"])
         subprocess.Popen(["pkill", "gzclient"])
         self.process = subprocess.Popen(
-            ["gazebo","-slibgazebo_yarp_clock.so", self.robot_model.world_path],
+            ["gazebo", "-slibgazebo_yarp_clock.so", self.robot_model.world_path],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
@@ -103,9 +110,9 @@ class GazeboLauncher:
         for _ in range(number_of_steps):
             self.write_clock_rpc_command(self.STEP_SIMULATION_AND_WAIT)
 
-    def perform_one_sim_step(self): 
+    def perform_one_sim_step(self):
         self.write_clock_rpc_command(self.STEP_SIMULATION_AND_WAIT)
-        
+
     def get_initial_configuration_world(self, control_board_name: str, world_path=None):
         if world_path is None:
             world_path = self.robot_model.world_path
@@ -151,13 +158,15 @@ class GazeboLauncher:
             f.write(etree.tostring(root, pretty_print=True))
 
     def modify_world(self, s, xyz_rpy, world_path=None):
-        if(not(self.initialized_control_board)): 
-            raise Exception("[comodo::GazeboLauncher] You have not initialized the control boards name, I cannot modify the world")
-       
+        if not (self.initialized_control_board):
+            raise Exception(
+                "[comodo::GazeboLauncher] You have not initialized the control boards name, I cannot modify the world"
+            )
+
         if world_path is None:
             world_path = self.robot_model.world_path
 
-        # TODO for now we assume that all the entry in the world are in s 
+        # TODO for now we assume that all the entry in the world are in s
         # self.constant_left_arm = self.get_initial_configuration_world(
         #     self.left_arm_control_board
         # )[4:]
@@ -176,25 +185,25 @@ class GazeboLauncher:
 
         tree = etree.parse(world_path)
         root = tree.getroot()
-        if(left_arm is not None):
+        if left_arm is not None:
             root = self.set_initial_configuration_world(
                 root, self.left_arm_control_board, left_arm
             )
-        if(right_arm is not None):
+        if right_arm is not None:
             root = self.set_initial_configuration_world(
                 root, self.right_arm_control_board, right_arm
             )
-        if(left_leg is not None):   
+        if left_leg is not None:
             root = self.set_initial_configuration_world(
                 root, self.left_leg_control_board, left_leg
             )
-        if(right_leg is not None):
+        if right_leg is not None:
             root = self.set_initial_configuration_world(
                 root, self.right_leg_control_board, right_leg
             )
-        if(torso is not None):
+        if torso is not None:
             root = self.set_initial_configuration_world(
-            root, self.torso_control_board, torso
+                root, self.torso_control_board, torso
             )
 
         root = self.set_pose_world(root, xyz_rpy)
