@@ -40,7 +40,7 @@ pip install --no-deps -e .
 
 ## Usage 
 
-Take a look at the [examples](https://github.com/ami-iit/comodo/examples) folder! 
+Take a look at the [examples](https://github.com/ami-iit/comodo/tree/main/examples) folder! 
 
 ### Maintainer
 
