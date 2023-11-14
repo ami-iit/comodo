@@ -17,19 +17,22 @@ Suite of parametrized controller and simulator for codesign of robots.
 ## Installation 
 This library depends on 
 
-``bipedal-locomotion-framework``
-``iDynTree``
-``ADAM``
-``urdf-modifier``
-``mujoco``
-``mujoco-python``
-``numpy``
+-[``casadi``](https://web.casadi.org/)
+-[``numpy``](https://numpy.org/)
+-[``idyntree``](https://github.com/robotology/idyntree)
+-[``bipedal-locomotion-framework``](https://github.com/ami-iit/bipedal-locomotion-framework)
+-[``adam-robotics``](https://github.com/ami-iit/ADAM/tree/main)
+-[``mujoco``](https://mujoco.org/)
+-[``mujoco-python-viewer``](https://github.com/rohanpsingh/mujoco-python-viewer)
+-[``matplotlib``](https://matplotlib.org/stable/)
+-[``gitpython``](https://github.com/gitpython-developers/GitPython)
+-[``urchin``](https://github.com/fishbotics/urchin)
 
 To install you can use the following commands
 
 
 ```
-conda install -c conda-forge adam-robotics idyntree bipedal-locomotion-framework mujoco==2.3 mujoco-python==2.3 numpy==1.22 mujoco-python-viewer matplotlib gitpython urchin networkx=3.1 urdf_py
+conda install -c conda-forge adam-robotics idyntree bipedal-locomotion-framework mujoco mujoco-python numpy mujoco-python-viewer matplotlib gitpython urchin 
 pip install --no-deps git+https://github.com/CarlottaSartore/urdf-modifiers.git@scalar_modification 
 pip install --no-deps -e .
 

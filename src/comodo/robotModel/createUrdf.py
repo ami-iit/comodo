@@ -5,7 +5,7 @@ from urdfModifiers.utils import *
 from urdfModifiers.geometry import *
 
 # import numpy as np
-from urdfpy import URDF
+from urchin import URDF
 import tempfile
 
 
