@@ -17,16 +17,16 @@ Suite of parametrized controller and simulator for codesign of robots.
 ## Installation 
 This library depends on 
 
--[``casadi``](https://web.casadi.org/)
--[``numpy``](https://numpy.org/)
--[``idyntree``](https://github.com/robotology/idyntree)
--[``bipedal-locomotion-framework``](https://github.com/ami-iit/bipedal-locomotion-framework)
--[``adam-robotics``](https://github.com/ami-iit/ADAM/tree/main)
--[``mujoco``](https://mujoco.org/)
--[``mujoco-python-viewer``](https://github.com/rohanpsingh/mujoco-python-viewer)
--[``matplotlib``](https://matplotlib.org/stable/)
--[``gitpython``](https://github.com/gitpython-developers/GitPython)
--[``urchin``](https://github.com/fishbotics/urchin)
+- [``casadi``](https://web.casadi.org/)
+- [``numpy``](https://numpy.org/)
+- [``idyntree``](https://github.com/robotology/idyntree)
+- [``bipedal-locomotion-framework``](https://github.com/ami-iit/bipedal-locomotion-framework)
+- [``adam-robotics``](https://github.com/ami-iit/ADAM/tree/main)
+- [``mujoco``](https://mujoco.org/)
+- [``mujoco-python-viewer``](https://github.com/rohanpsingh/mujoco-python-viewer)
+- [``matplotlib``](https://matplotlib.org/stable/)
+- [``gitpython``](https://github.com/gitpython-developers/GitPython)
+- [``urchin``](https://github.com/fishbotics/urchin)
 
 To install you can use the following commands
 
@@ -40,7 +40,7 @@ pip install --no-deps -e .
 
 ## Usage 
 
-Take a look at the example folder! 
+Take a look at the [examples](https://github.com/ami-iit/comodo/examples) folder! 
 
 ### Maintainer
 
