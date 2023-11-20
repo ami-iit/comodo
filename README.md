@@ -21,7 +21,7 @@ This library depends on
 - [``numpy``](https://numpy.org/)
 - [``idyntree``](https://github.com/robotology/idyntree)
 - [``bipedal-locomotion-framework``](https://github.com/ami-iit/bipedal-locomotion-framework)
-- [``adam-robotics``](https://github.com/ami-iit/ADAM/tree/main)
+- [``adam-robotics``](https://github.com/ami-iit/ADAM)
 - [``mujoco``](https://mujoco.org/)
 - [``mujoco-python-viewer``](https://github.com/rohanpsingh/mujoco-python-viewer)
 - [``matplotlib``](https://matplotlib.org/stable/)
