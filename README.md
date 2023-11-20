@@ -25,14 +25,14 @@ This library depends on
 - [``mujoco``](https://mujoco.org/)
 - [``mujoco-python-viewer``](https://github.com/rohanpsingh/mujoco-python-viewer)
 - [``matplotlib``](https://matplotlib.org/stable/)
-- [``gitpython``](https://github.com/gitpython-developers/GitPython)
+- [``urllib3``](https://urllib3.readthedocs.io/en/stable/)
 - [``urchin``](https://github.com/fishbotics/urchin)
 
 To install you can use the following commands
 
 
 ```
-conda create -n comododev -c conda-forge adam-robotics idyntree bipedal-locomotion-framework mujoco mujoco-python numpy mujoco-python-viewer matplotlib gitpython urchin
+conda create -n comododev -c conda-forge adam-robotics idyntree bipedal-locomotion-framework mujoco mujoco-python numpy mujoco-python-viewer matplotlib urllib3 urchin
 conda activate comododev
 pip install --no-deps git+https://github.com/CarlottaSartore/urdf-modifiers.git@scalar_modification 
 pip install --no-deps -e .
