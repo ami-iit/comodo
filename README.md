@@ -42,6 +42,17 @@ pip install --no-deps -e .
 ## Usage 
 
 Take a look at the [examples](./examples) folder! 
+To run the examples you will need to install notebook
+```
+conda install notebook
+```
+
+> [!NOTE]  
+> Running the example using the [drake simulator](https://drake.mit.edu/) needs installing the following additional dependencies,
+```
+conda install meshio tqdm
+pip install drake git+https://github.com/akhilsathuluri/odio_urdf.git@comodo
+``` 
 
 ### Maintainer
 
