@@ -22,6 +22,24 @@ class RobotModel(KinDynComputations):
         left_foot: str = "l_sole",
         right_foot: str = "r_sole",
         torso: str = "chest",
+        right_foot_rear_ct: str = "rigth_foot_rear",
+        right_foot_front_ct: str = "rigth_foot_front",
+        left_foot_rear_ct: str = "left_foot_rear",
+        left_foot_front_ct: str = "left_foot_front",
+        legs_gain_kp: np.float32 = np.array(
+            [35 * 70.0, 35 * 70.0, 35 * 40.0, 35 * 100.0, 35 * 100.0, 35 * 100.0]
+        ),
+        arms_gain_kp: np.float32 = np.array(
+            [20 * 5.745, 20 * 5.745, 20 * 5.745, 20 * 1.745]
+        ),
+        torso_gain_kp: np.float32 = np.array([100, 120, 120]),
+        legs_gain_kd: np.float32 = np.array(
+            [15 * 0.15, 15 * 0.15, 15 * 0.35, 15 * 0.15, 15 * 0.15, 15 * 0.15]
+        ),
+        arms_gain_kd: np.float32 = np.array(
+            [4 * 5.745, 4 * 5.745, 4 * 5.745, 4 * 1.745]
+        ),
+        torso_gain_kd: np.float32 = np.array([10, 10, 10]),
     ) -> None:
         self.urdf_string = urdfstring
         self.robot_name = robot_name
@@ -30,6 +48,10 @@ class RobotModel(KinDynComputations):
         self.left_foot_frame = left_foot
         self.right_foot_frame = right_foot
         self.torso_link = torso
+        self.right_foot_rear_ct = right_foot_rear_ct
+        self.right_foot_front_ct = right_foot_front_ct
+        self.left_foot_rear_ct = left_foot_rear_ct
+        self.left_foot_front_ct = left_foot_front_ct
 
         self.remote_control_board_list = [
             "/" + self.robot_name + "/torso",
@@ -39,7 +61,13 @@ class RobotModel(KinDynComputations):
             "/" + self.robot_name + "/right_leg",
         ]
 
-        # self.mujoco_lines_urdf = '<mujoco> <compiler discardvisual="false"/> </mujoco>'
+        self.kp_position_control = np.concatenate(
+            (legs_gain_kp, legs_gain_kp, arms_gain_kp, arms_gain_kp)
+        )
+        self.kd_position_control = np.concatenate(
+            (legs_gain_kd, legs_gain_kd, arms_gain_kd, arms_gain_kd)
+        )
+        self.ki_position_control = 10 * self.kd_position_control
         self.gravity = iDynTree.Vector3()
         self.gravity.zero()
         self.gravity.setVal(2, -9.81)
@@ -179,7 +207,7 @@ class RobotModel(KinDynComputations):
         z = (R[1, 0] - R[0, 1]) / S
 
         # Normalize the quaternion
-        length = cs.sqrt(w ** 2 + x ** 2 + y ** 2 + z ** 2)
+        length = cs.sqrt(w**2 + x**2 + y**2 + z**2)
         w /= length
         x /= length
         y /= length

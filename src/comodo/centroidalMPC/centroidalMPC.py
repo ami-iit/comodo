@@ -10,7 +10,6 @@ from comodo.centroidalMPC.mpcParameterTuning import MPCParameterTuning
 
 class CentroidalMPC(Planner):
     def __init__(self, robot_model, step_length, frequency_ms=100):
-
         self.dT = timedelta(milliseconds=frequency_ms)
         self.dT_in_seconds = frequency_ms / 1000
         self.contact_planner = FootPositionPlanner(
@@ -33,7 +32,6 @@ class CentroidalMPC(Planner):
         return self.dT_in_seconds
 
     def plan_trajectory(self):
-
         com = self.kindyn.getCenterOfMassPosition()
         dcom = self.kindyn.getCenterOfMassVelocity()
         Jcm = iDynTree.MatrixDynSize(6, 6 + self.robot_model.NDoF)
@@ -271,4 +269,5 @@ class CentroidalMPC(Planner):
             forces_right = forces_right + item.force
         com = self.centroidal_integrator.get_solution()[0]
         dcom = self.centroidal_integrator.get_solution()[1]
-        return com, dcom, forces_left, forces_right
+        ang_mom = self.centroidal_integrator.get_solution()[2]
+        return com, dcom, forces_left, forces_right, ang_mom

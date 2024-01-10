@@ -7,6 +7,8 @@ import mujoco_viewer
 
 class MujocoSimulator(Simulator):
     def __init__(self) -> None:
+        self.desired_pos = None
+        self.postion_control = False
         super().__init__()
 
     def load_model(self, robot_model, s, xyz_rpy, kv_motors=None, Im=None):
@@ -48,19 +50,35 @@ class MujocoSimulator(Simulator):
         self.data.ctrl = input
         np.copyto(self.data.ctrl, input)
 
+    def set_position_input(self, pos):
+        self.desired_pos = pos
+        self.postion_control = True
+
     def step(self, n_step=1, visualize=True):
-        mujoco.mj_step(self.model, self.data, n_step)
-        mujoco.mj_step1(self.model, self.data)
-        mujoco.mj_forward(self.model, self.data)
-        if self.visualize_robot_flag and visualize:
+        if self.postion_control:
+            for _ in range(n_step):
+                s, s_dot, tau = self.get_state()
+                ctrl = (
+                    self.robot_model.kp_position_control * (self.desired_pos - s)
+                    - self.robot_model.kd_position_control * s_dot
+                )
+                self.data.ctrl = ctrl
+                np.copyto(self.data.ctrl, ctrl)
+                mujoco.mj_step(self.model, self.data)
+                mujoco.mj_step1(self.model, self.data)
+                mujoco.mj_forward(self.model, self.data)
+        else:
+            mujoco.mj_step(self.model, self.data, n_step)
+            mujoco.mj_step1(self.model, self.data)
+            mujoco.mj_forward(self.model, self.data)
+
+        if self.visualize_robot_flag:
             self.viewer.render()
 
     def step_with_motors(self, n_step, torque):
-
         indexes_joint_acceleration = self.model.jnt_dofadr[1:]
         s_dot_dot = self.data.qacc[indexes_joint_acceleration[0] :]
         for _ in range(n_step):
-
             indexes_joint_acceleration = self.model.jnt_dofadr[1:]
             s_dot_dot = self.data.qacc[indexes_joint_acceleration[0] :]
             s_dot = self.data.qvel[indexes_joint_acceleration[0] :]
@@ -78,9 +96,42 @@ class MujocoSimulator(Simulator):
         if self.visualize_robot_flag:
             self.viewer.render()
 
+    def get_feet_wrench(self):
+        left_foot_rear_wrench = np.zeros(6)
+        left_foot_front_wrench = np.zeros(6)
+        rigth_foot_rear_wrench = np.zeros(6)
+        rigth_foot_front_wrench = np.zeros(6)
+
+        for i in range(self.data.ncon):
+            contact = self.data.contact[i]
+            c_array = np.zeros(6, dtype=np.float64)
+            force_global = np.zeros(3, dtype=np.float64)
+            torque_global = np.zeros(3, dtype=np.float64)
+            mujoco.mj_contactForce(self.model, self.data, i, c_array)
+            frame_i = np.transpose(contact.frame.reshape(3, 3))
+            mujoco.mju_mulMatTVec(force_global[:3], frame_i, c_array[:3])
+            mujoco.mju_mulMatTVec(torque_global[:3], frame_i, c_array[3:])
+            name_contact = mujoco.mj_id2name(
+                self.model, mujoco.mjtObj.mjOBJ_GEOM, int(contact.geom[1])
+            )
+            force_global[2] = -force_global[2]
+            if name_contact == self.robot_model.right_foot_rear_ct:
+                rigth_foot_rear_wrench = np.concatenate((force_global, torque_global))
+            elif name_contact == self.robot_model.right_foot_front_ct:
+                rigth_foot_front_wrench = np.concatenate((force_global, torque_global))
+            elif name_contact == self.robot_model.left_foot_front_ct:
+                left_foot_front_wrench = np.concatenate((force_global, torque_global))
+            elif name_contact == self.robot_model.left_foot_rear_ct:
+                left_foot_rear_wrench = np.concatenate((force_global, torque_global))
+        return (
+            left_foot_front_wrench,
+            left_foot_rear_wrench,
+            rigth_foot_front_wrench,
+            rigth_foot_rear_wrench,
+        )
+
     # note that for mujoco the ordering is w,x,y,z
     def get_base(self):
-
         indexes_joint = self.model.jnt_qposadr[1:]
         # Extract quaternion components
         w, x, y, z = self.data.qpos[3 : indexes_joint[0]]
