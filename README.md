@@ -32,7 +32,7 @@ To install you can use the following commands
 
 
 ```
-conda create -n comododev -c conda-forge adam-robotics idyntree bipedal-locomotion-framework=0.15.0 mujoco mujoco-python numpy mujoco-python-viewer matplotlib urllib3 urchin
+conda create -n comododev -c conda-forge adam-robotics idyntree bipedal-locomotion-framework=0.16.0 mujoco mujoco-python numpy mujoco-python-viewer matplotlib urllib3 urchin
 conda activate comododev
 pip install --no-deps git+https://github.com/CarlottaSartore/urdf-modifiers.git@scalar_modification 
 pip install --no-deps -e .
