@@ -39,9 +39,11 @@ class createUrdf:
             # Apply the modifications
             fixed_offset_modifier.modify(fixed_offset_modifications)
 
-    def write_urdf_to_file(self):
+    def write_urdf_to_file(self, save_to_file = False, file_path = None):
         """Saves the URDF to a valid .urdf file, also adding the gazebo_plugins"""
         tempFileOut = tempfile.NamedTemporaryFile(mode="w+")
+        if(save_to_file): 
+            self.robot.save(file_path)
         self.robot.save(tempFileOut.name)
 
         if self.save_gazebo_plugin:
