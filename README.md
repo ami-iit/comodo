@@ -32,27 +32,22 @@ To install you can use the following commands
 
 
 ```
-conda create -n comododev -c conda-forge adam-robotics idyntree bipedal-locomotion-framework mujoco mujoco-python numpy mujoco-python-viewer matplotlib urllib3 urchin
+conda create -n comododev -c conda-forge adam-robotics idyntree bipedal-locomotion-framework mujoco mujoco-python numpy mujoco-python-viewer matplotlib urllib3 urchin notebook
 conda activate comododev
 pip install --no-deps git+https://github.com/CarlottaSartore/urdf-modifiers.git@scalar_modification 
 pip install --no-deps -e .
 
 ```
 
-## Usage 
-
-Take a look at the [examples](./examples) folder! 
-To run the examples you will need to install notebook
-```
-conda install notebook
-```
-
-> [!NOTE]  
-> Running the example using the [drake simulator](https://drake.mit.edu/) needs installing the following additional dependencies,
+Working with drake as the simulator backend requires the following additional dependencies,
 ```
 conda install meshio tqdm
 pip install drake git+https://github.com/akhilsathuluri/odio_urdf.git@comodo
-``` 
+```
+
+## Usage 
+
+Take a look at the [examples](./examples) folder! 
 
 ### Maintainer
 

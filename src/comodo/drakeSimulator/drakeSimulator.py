@@ -21,7 +21,7 @@ from pydrake.systems.framework import (
 )
 
 from comodo.abstractClasses.simulator import Simulator as SimulatorAbstract
-from comodo.drakeSimulator.utils import DrakeURDFHelper
+from comodo.drakeSimulator.drakeURDFHelper import DrakeURDFHelper
 
 # the style of wrapping the simulator is inspired by the approach by DrakeGymEnv:
 # https://github.com/RobotLocomotion/drake/blob/master/bindings/pydrake/gym/_drake_gym_env.py#L177
@@ -60,15 +60,17 @@ class DrakeSimulator(SimulatorAbstract):
         )[0]
 
         # TODO: Use Im and Km to add motor params here
+        logging.warning("NotImplementedWarning: Motor parameters are currently ignored.")
         # ignoring those arguments for now
 
         # add the ground and the feet
         self.duh.add_ground_with_friction(plant)
 
         # configure feet collisions
-        xMinMax = [-0.1, 0.1]
+        xMinMax = [-0.225, 0.225]
         yMinMax = [-0.05, 0.05]
-        self.duh.add_soft_feet_collisions(plant, xMinMax=xMinMax, yMinMax=yMinMax)
+        foot_frames = [robot_model.left_foot_frame, robot_model.right_foot_frame]
+        self.duh.add_soft_feet_collisions(plant, xMinMax=xMinMax, yMinMax=yMinMax, foot_frames = foot_frames)
 
         plant.Finalize()
         builder.ExportInput(plant.get_actuation_input_port(), "control_input")
@@ -137,6 +139,7 @@ class DrakeSimulator(SimulatorAbstract):
         # pass meshcat to visualise the robot
         self.visualize_robot_flag = visualize_robot
         if self.visualize_robot_flag and not self.active_meshcat:
+            logging.info("Visualisation for drake via meshcat can be accessd via the url output from the execution.")
             self.meshcat = StartMeshcat()
             self.active_meshcat = True
         pass
@@ -149,27 +152,25 @@ class DrakeSimulator(SimulatorAbstract):
         base_xyz_quat[4:] = xyz_rpy[:3]
         self.qpos[:7] = base_xyz_quat
 
-    # set initial positions of the joints
     def set_joint_vector_in_drake(self, pos):
         self.qpos[7:] = pos
         pass
 
     def set_input(self, input):
-        # expose the acutation output port of the system to accept control
-        # inputs from the TSID and CentroidalMPC and step drake simulator
         self.control_input_port.FixValue(self.context, input)
         pass
 
     def step(self, n_step=1, visualize=True):
-        # TODO: does nothing currently
-        # self.control_input_port.FixValue(self.context, self.joint_torques)
         self.simulator.AdvanceTo(self.context.get_time() + n_step * self.time_step)
         if visualize and self.visualize_robot_flag:
             self.diagram.ForcedPublish(self.context)
         pass
 
-    def step_with_motors(self, n_step, torque):
-        # implementation of motor level control inputs?
+    def step_with_motors(self, n_step, torque, visualize=True):
+        logging.warning("NotImplementedWarning: Stepping with motor parameters is not yet implemented.")
+        self.simulator.AdvanceTo(self.context.get_time() + n_step * self.time_step)
+        if visualize and self.visualize_robot_flag:
+            self.diagram.ForcedPublish(self.context)
         pass
 
     def get_base(self):
@@ -189,13 +190,11 @@ class DrakeSimulator(SimulatorAbstract):
         # order -- linar_vel + angular_vel
         return np.concatenate((base_vel[3:], base_vel[:3]))
 
-    # TODO: Change from get_state to get_joint_state?
     def get_state(self):
-        # this is for the state output return
+        # logging.warning("get_state returns only joint state.")
         robot_state = self.state_output_port.Eval(self.context)
         robot_pos = robot_state[: self.nq]
         robot_vel = robot_state[self.nq : self.nq + self.nv]
-        # return joint state to be coherent with the MuJoCo API
         return (
             robot_pos[7:],
             robot_vel[6:],
@@ -216,7 +215,6 @@ class DrakeSimulator(SimulatorAbstract):
         # return the simulator timestep
         return self.time_step
 
-    # we will need similar stuff but with manifpy
     def RPY_to_quat(self, roll, pitch, yaw):
         cr = math.cos(roll / 2)
         cp = math.cos(pitch / 2)
@@ -230,7 +228,6 @@ class DrakeSimulator(SimulatorAbstract):
         qy = cr * sp * cy + sr * cp * sy
         qz = cr * cp * sy - sr * sp * cy
 
-        # Note: The order for drake is different as compared to mujoco
         return [qw, qx, qy, qz]
 
     def close_visualization(self):
@@ -240,4 +237,3 @@ class DrakeSimulator(SimulatorAbstract):
             the visualisation."
         )
         self.reset()
-        pass

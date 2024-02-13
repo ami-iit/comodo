@@ -66,22 +66,6 @@ class DrakeURDFHelper:
             # replace the urdf to load .obj files
             child.set("filename", path.replace("stl", "obj"))
 
-        # # if the same, will be ignored else converted
-        # logging.info("Converting all the collision meshes")
-        # for child in tqdm(self.root.findall("./link/collision/geometry/mesh")):
-        #     # extract mesh location and name associated with the urdf
-        #     path = child.attrib["filename"]
-        #     child_mesh_path = self.mesh_path + path.split("package://")[1]
-        #     # convert the mesh and save it in the same folder
-        #     child_mesh_name = child_mesh_path.replace("stl", "obj")
-        #     if not Path(child_mesh_name).is_file():
-        #         # temp_mesh = pymesh.load_mesh(child_mesh_path)
-        #         # pymesh.save_mesh(child_mesh_name, temp_mesh)
-        #         temp_mesh = meshio.read(child_mesh_path)
-        #         temp_mesh.write(child_mesh_name)
-        #     # replace the urdf to load .obj files
-        #     child.set("filename", path.replace("stl", "obj"))
-
         logging.info("Converted all the meshes from .stl to .obj")
 
     def remove_all_collisions(self):
@@ -179,20 +163,19 @@ class DrakeURDFHelper:
             np.array([0.5, 0.5, 0.5, 0.0]),
         )
 
-    def add_soft_feet_collisions(self, plant, xMinMax, yMinMax):
+    def add_soft_feet_collisions(self, plant, xMinMax, yMinMax, foot_frames):
         surface_friction_feet = CoulombFriction(
             static_friction=1.0, dynamic_friction=1.0
         )
         proximity_properties_feet = ProximityProperties()
         AddContactMaterial(1e4, 1e7, surface_friction_feet, proximity_properties_feet)
         AddCompliantHydroelasticProperties(0.01, 1e8, proximity_properties_feet)
-        for ii in ["l_foot_front", "l_foot_rear", "r_foot_front", "r_foot_rear"]:
-            # for ii in ["r_foot", "l_foot"]:
+
+        for ii in foot_frames:
             # for collision
             plant.RegisterCollisionGeometry(
                 plant.GetBodyByName(ii),
                 RigidTransform(np.array([0, 0, 0])),
-                # RigidTransform(),
                 BoxDrake((xMinMax[1] - xMinMax[0]) / 2, yMinMax[1] - yMinMax[0], 2e-3),
                 ii + "_collision",
                 proximity_properties_feet,
@@ -202,7 +185,6 @@ class DrakeURDFHelper:
             plant.RegisterVisualGeometry(
                 plant.GetBodyByName(ii),
                 RigidTransform(np.array([0, 0, 0])),
-                # RigidTransform(),
                 BoxDrake((xMinMax[1] - xMinMax[0]) / 2, yMinMax[1] - yMinMax[0], 2e-3),
                 ii + "_collision",
                 np.array([1.0, 1.0, 1.0, 1]),
