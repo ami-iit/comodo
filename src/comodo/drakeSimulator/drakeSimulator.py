@@ -139,6 +139,7 @@ class DrakeSimulator(SimulatorAbstract):
         # pass meshcat to visualise the robot
         self.visualize_robot_flag = visualize_robot
         if self.visualize_robot_flag and not self.active_meshcat:
+            logging.info("Visualisation for drake via meshcat can be accessd via the url output from the execution.")
             self.meshcat = StartMeshcat()
             self.active_meshcat = True
         pass
