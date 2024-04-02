@@ -1,15 +1,13 @@
-from adam.casadi.computations import KinDynComputations
-import numpy as np
-from urchin import URDF
-from urchin import Joint
-from urchin import Link
-import mujoco
+import copy
 import tempfile
 import xml.etree.ElementTree as ET
-import idyntree.bindings as iDynTree
+
 import casadi as cs
-import copy
-import xml.etree.ElementTree as ET
+import idyntree.bindings as iDynTree
+import mujoco
+import numpy as np
+from adam.casadi.computations import KinDynComputations
+from urchin import URDF, Joint, Link
 
 
 class RobotModel(KinDynComputations):
@@ -80,7 +78,11 @@ class RobotModel(KinDynComputations):
         shoulder_roll = 0.251
         elbow = 0.616
 
-        p_opts = {}
+        p_opts = {
+            "ipopt.print_level": 0,
+            "print_time": 0,
+            "ipopt.sb": "yes",
+        }
         s_opts = {"linear_solver": "mumps"}
         self.solver = cs.Opti()
         self.solver.solver("ipopt", p_opts, s_opts)
@@ -179,7 +181,7 @@ class RobotModel(KinDynComputations):
         z = (R[1, 0] - R[0, 1]) / S
 
         # Normalize the quaternion
-        length = cs.sqrt(w ** 2 + x ** 2 + y ** 2 + z ** 2)
+        length = cs.sqrt(w**2 + x**2 + y**2 + z**2)
         w /= length
         x /= length
         y /= length
