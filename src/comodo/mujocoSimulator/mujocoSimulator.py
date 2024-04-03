@@ -15,8 +15,6 @@ class MujocoSimulator(Simulator):
         self.robot_model = robot_model
         mujoco_xml = robot_model.get_mujoco_model()
         self.model = mujoco.MjModel.from_xml_string(mujoco_xml)
-        # mujoco.mj_saveLastXML("/home/carlotta/iit_ws/element_hardware-intelligence/muj_mod.xml",self.model)
-        # mujoco.MjModel.mj_saveModel()
         self.data = mujoco.MjData(self.model)
         mujoco.mj_forward(self.model, self.data)
         self.set_joint_vector_in_mujoco(s)

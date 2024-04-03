@@ -22,10 +22,10 @@ class RobotModel(KinDynComputations):
         left_foot: str = "l_sole",
         right_foot: str = "r_sole",
         torso: str = "chest",
-        right_foot_rear_ct: str = "rigth_foot_rear",
-        right_foot_front_ct: str = "rigth_foot_front",
-        left_foot_rear_ct: str = "left_foot_rear",
-        left_foot_front_ct: str = "left_foot_front",
+        right_foot_rear_link_name: str = "r_foot_rear",
+        right_foot_front_link_name: str = "r_foot_front",
+        left_foot_rear_link_name: str = "l_foot_rear",
+        left_foot_front_link_name: str = "l_foot_front",
         legs_gain_kp: np.float32 = np.array(
             [35 * 70.0, 35 * 70.0, 35 * 40.0, 35 * 100.0, 35 * 100.0, 35 * 100.0]
         ),
@@ -41,6 +41,8 @@ class RobotModel(KinDynComputations):
         ),
         torso_gain_kd: np.float32 = np.array([10, 10, 10]),
     ) -> None:
+        self.collision_keyword = "_collision"
+        self.visual_keyword = "_visual"
         self.urdf_string = urdfstring
         self.robot_name = robot_name
         self.joint_name_list = joint_name_list
@@ -48,10 +50,10 @@ class RobotModel(KinDynComputations):
         self.left_foot_frame = left_foot
         self.right_foot_frame = right_foot
         self.torso_link = torso
-        self.right_foot_rear_ct = right_foot_rear_ct
-        self.right_foot_front_ct = right_foot_front_ct
-        self.left_foot_rear_ct = left_foot_rear_ct
-        self.left_foot_front_ct = left_foot_front_ct
+        self.right_foot_rear_ct = right_foot_rear_link_name + self.collision_keyword
+        self.right_foot_front_ct = right_foot_front_link_name+ self.collision_keyword
+        self.left_foot_rear_ct = left_foot_rear_link_name + self.collision_keyword
+        self.left_foot_front_ct = left_foot_front_link_name+ self.collision_keyword
 
         self.remote_control_board_list = [
             "/" + self.robot_name + "/torso",
@@ -132,11 +134,6 @@ class RobotModel(KinDynComputations):
         H_torso = self.w_H_torso(H_b, self.s)
         quat_torso = self.rotation_matrix_to_quaternion(H_torso[:3, :3])
         reference_rotation = np.asarray([1.0, 0.0, 0.0, 0.0])
-
-        # self.solver.subject_to(cs.abs(self.s[11])> 0.05 )
-        # self.solver.subject_to(self.s[11]< -0.05)
-        # self.solver.subject_to(cs.abs(self.s[17])>0.05 )
-        # self.solver.subject_to(self.s[17]< -0.05)
         self.solver.subject_to(self.s[17] == desired_knee)
         self.solver.subject_to(self.s[11] == desired_knee)
         self.solver.subject_to(self.s[3] == elbow)
@@ -144,7 +141,6 @@ class RobotModel(KinDynComputations):
         self.solver.subject_to(self.s[1] == shoulder_roll)
         self.solver.subject_to(self.s[5] == shoulder_roll)
         self.solver.subject_to(self.s[9] == self.s[15])
-        # self.solver.subject_to(cs.norm_2(self.quat_pose_b[:4]) == 1.0)
         self.solver.subject_to(H_left_foot[2, 3] == 0.0)
         self.solver.subject_to(H_right_foot[2, 3] == 0.0)
         self.solver.subject_to(quat_left_foot == reference_rotation)
@@ -153,8 +149,6 @@ class RobotModel(KinDynComputations):
         cost_function = cs.sumsqr(self.s)
         cost_function += cs.sumsqr(H_left_foot[:2, 3] - left_foot_pos[:2])
         cost_function += cs.sumsqr(H_right_foot[:2, 3] - right_foot_pos[:2])
-        # cost_function += cs.sumsqr(self.s[11] - desired_knee)
-        # cost_function += cs.sumsqr(self.s[17] - desired_knee)
         self.solver.minimize(cost_function)
         self.sol = self.solver.solve()
         s_return = np.array(self.sol.value(self.s))
@@ -228,6 +222,17 @@ class RobotModel(KinDynComputations):
         world_link = Link("world", None, None, None)
         robot._links.append(world_link)
         robot._joints.append(world_joint)
+        ## Adding collision and visuals name  
+        
+        for link in robot.links:
+            if link.collisions:
+                if not link.collisions[0].name:
+                    print(link.name)
+                    link.collisions[0].name = link.name + self.collision_keyword 
+            if link.visuals: 
+                if not link.visuals[0].name: 
+                    link.visuals[0].name = link.name + self.visual_keyword
+        
         temp_urdf = tempfile.NamedTemporaryFile(mode="w+")
         robot.save(temp_urdf.name)
         tree = ET.parse(temp_urdf.name)
