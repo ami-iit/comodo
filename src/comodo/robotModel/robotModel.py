@@ -119,6 +119,8 @@ class RobotModel(KinDynComputations):
         self.w_H_torso = self.forward_kinematics_fun(self.torso_link)
         self.s = self.solver.variable(self.NDoF)  # joint positions
         self.quat_pose_b = self.solver.variable(7)
+        self.H_left_foot = self.forward_kinematics_fun(self.left_foot_frame) #TODO declare only if needed 
+        self.H_right_foot = self.forward_kinematics_fun(self.right_foot_frame)
         left_foot_pos = np.asarray([0.000267595, 0.0801685, 0.0])
         left_foot_rotation = np.eye(3)
         right_foot_pos = np.asarray([-0.000139057, -0.0803188, 0.0])
@@ -263,7 +265,7 @@ class RobotModel(KinDynComputations):
         mujoco_el = ET.Element("mujoco")
         compiler_el = ET.Element("compiler")
         compiler_el.set("discardvisual", "false")
-        compiler_el.set("meshdir",str(meshes))
+        if not(meshes is None) : compiler_el.set("meshdir",str(meshes))
         mujoco_el.append(compiler_el)
         robot_el.append(mujoco_el)
         # # Convert the XML tree to a string
@@ -514,6 +516,8 @@ class RobotModel(KinDynComputations):
         """
         # find the mesh path
         mesh = robot_urdf.find(".//mesh")
+        if(mesh is None):
+            return None
         path = mesh.attrib["filename"]
         mesh_path = rru.resolve_robotics_uri(path).parent
 
