@@ -9,8 +9,8 @@ import xml.etree.ElementTree as ET
 import idyntree.bindings as iDynTree
 import casadi as cs
 import copy
-import xml.etree.ElementTree as ET
-
+import resolve_robotics_uri_py as rru
+from pathlib import Path
 
 class RobotModel(KinDynComputations):
     def __init__(
@@ -115,8 +115,7 @@ class RobotModel(KinDynComputations):
         self.solver = cs.Opti()
         self.solver.solver("ipopt", p_opts, s_opts)
 
-        self.H_left_foot = self.forward_kinematics_fun(self.left_foot_frame)
-        self.H_right_foot = self.forward_kinematics_fun(self.right_foot_frame)
+
         self.w_H_torso = self.forward_kinematics_fun(self.torso_link)
         self.s = self.solver.variable(self.NDoF)  # joint positions
         self.quat_pose_b = self.solver.variable(7)
@@ -210,54 +209,74 @@ class RobotModel(KinDynComputations):
         return cs.vertcat(w, x, y, z)
 
     def get_mujoco_urdf_string(self):
+        ## We first start by ET 
         tempFileOut = tempfile.NamedTemporaryFile(mode="w+")
         tempFileOut.write(copy.deepcopy(self.urdf_string))
-        robot = URDF.load(tempFileOut.name)
+        root = ET.fromstring(self.urdf_string)
 
-        ## Adding floating joint to have floating base system
-        for item in robot.joints:
-            if item.name not in (self.joint_name_list):
-                item.joint_type = "fixed"
-        world_joint = Joint("floating_joint", "floating", "world", self.base_link)
-        world_link = Link("world", None, None, None)
-        robot._links.append(world_link)
-        robot._joints.append(world_joint)
-        ## Adding collision and visuals name  
+        # Declaring as fixed the not controlled joints
+        for joint in root.findall('.//joint'): 
+            joint_name = joint.attrib.get('name')
+            if(joint_name not in self.joint_name_list):
+                joint.set('type', 'fixed')
+
+        new_link = ET.Element('link')
+        new_link.set('name', "world")
+        root.append(new_link)
+        floating_joint = ET.Element('joint')
+        floating_joint.set('name', "floating_joint")
+        floating_joint.set('type', "floating")
+        # Create parent element
+        parent = ET.Element('parent')
+        parent.set('link', "world")
+        floating_joint.append(parent)
+
+        # Create child element
+        child = ET.Element('child')
+        child.set('link', self.base_link)
+        floating_joint.append(child)
+
+        # Append the new joint element to the root
+        root.append(floating_joint)
         
-        for link in robot.links:
-            if link.collisions:
-                if not link.collisions[0].name:
-                    print(link.name)
-                    link.collisions[0].name = link.name + self.collision_keyword 
-            if link.visuals: 
-                if not link.visuals[0].name: 
-                    link.visuals[0].name = link.name + self.visual_keyword
-        
-        temp_urdf = tempfile.NamedTemporaryFile(mode="w+")
-        robot.save(temp_urdf.name)
-        tree = ET.parse(temp_urdf.name)
-        root = tree.getroot()
+        ## Adding the name to the collision and link visual 
+        for link in root.findall('.//link'):
+            link_name = link.attrib.get('name')
+            # Check if a collision element with a name exists
+            collision_elements = link.findall('./collision')
+            if not any(collision.find('name') is not None for collision in collision_elements):
+                # If no collision element with a name exists, add one
+                if collision_elements:
+                    # If there are collision elements, append name to the first one
+                    collision_elements[0].set('name',link_name+ self.collision_keyword )
+            visual_elements = link.findall('./visual')
+            if not any(visual.find('name') is not None for visual in visual_elements):
+                # If no collision element with a name exists, add one
+                if visual_elements:
+                    visual_elements[0].set('name', link_name+ self.visual_keyword)
+        meshes = self.get_mesh_path(root)
         robot_el = None
         for elem in root.iter():
             if elem.tag == "robot":
                 robot_el = elem
                 break
-        ## Adding compiler discard visaul false for mujoco rendering
         mujoco_el = ET.Element("mujoco")
         compiler_el = ET.Element("compiler")
         compiler_el.set("discardvisual", "false")
+        compiler_el.set("meshdir",str(meshes))
         mujoco_el.append(compiler_el)
         robot_el.append(mujoco_el)
-        # Convert the XML tree to a string
+        # # Convert the XML tree to a string
         robot_urdf_string_original = ET.tostring(root)
-        # urdf_string_temp  = temp_urdf.read()
         return robot_urdf_string_original
 
     def get_mujoco_model(self):
         urdf_string = self.get_mujoco_urdf_string()
-        # urdf_string = urdf_mujoco_file.read()
+        # return "ciao"
+        # # urdf_string = urdf_mujoco_file.read()
         mujoco_model = mujoco.MjModel.from_xml_string(urdf_string)
-
+        
+# 
         path_temp_xml = tempfile.NamedTemporaryFile(mode="w+")
         mujoco.mj_saveLastXML(path_temp_xml.name, mujoco_model)
 
@@ -357,6 +376,10 @@ class RobotModel(KinDynComputations):
         floor.set("condim", "3")
         world_elem.append(floor)
         new_xml = ET.tostring(tree.getroot(), encoding="unicode")
+
+        self.H_left_foot = self.forward_kinematics_fun(self.left_foot_frame)
+        self.H_right_foot = self.forward_kinematics_fun(self.right_foot_frame)
+
         return new_xml
 
     def get_base_pose_from_contacts(self, s, contact_frames_pose: dict):
@@ -478,3 +501,20 @@ class RobotModel(KinDynComputations):
         Jcm = self.get_centroidal_momentum_jacobian()
         nu = np.concatenate((self.w_b.toNumPy(), self.ds.toNumPy()))
         return Jcm @ nu
+
+    def get_mesh_path(self, robot_urdf: ET.Element) -> Path:
+        """
+        Get the mesh path from the robot urdf.
+
+        Args:
+            robot_urdf (ET.Element): The robot urdf.
+
+        Returns:
+            Path: The mesh path.
+        """
+        # find the mesh path
+        mesh = robot_urdf.find(".//mesh")
+        path = mesh.attrib["filename"]
+        mesh_path = rru.resolve_robotics_uri(path).parent
+
+        return mesh_path
