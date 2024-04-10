@@ -291,8 +291,6 @@ class InverseKinematic(Controller):
             s_desired, np.zeros(self.robot_model.NDoF)
         )
         zmp_des = self.compute_zmp_wrench(wrenches_left, wrenches_right)
-        gain_com = 4.4
-        gain_zmp = 0.34
         com_vel_control = np.zeros(3)
         # # define the input
         controller_input = blf.simplified_model_controllers.CoMZMPControllerInput()
@@ -353,41 +351,26 @@ class InverseKinematic(Controller):
     ##Def abstract methods
     def get_fitness_parameters(self):
         print("to be implemented")
+        pass 
 
     def compute_zmp(
         self,
-        left_front_wrench: np.array,
-        left_rear_wrench: np.array,
-        right_front_wrench: np.array,
-        right_rear_wrench: np.array,
+        left_wrench: np.array,
+        right_wrench: np.array,
     ) -> np.array:
         """Auxiliary function to retrieve the zero-moment point from the feet wrenches."""
 
-        # Compute wrenches of the feet
-        left_wrench = left_rear_wrench + left_front_wrench
-        right_wrench = right_rear_wrench + right_front_wrench
-
         # Compute local zmps (one per foot) from the foot wrenches
         LF_r_zmp_L = [-left_wrench[4] / left_wrench[2], left_wrench[3] / left_wrench[2]]
-        RF_r_zmp_R = [
-            -right_wrench[4] / right_wrench[2],
-            right_wrench[3] / right_wrench[2],
-        ]
+        RF_r_zmp_R = [-right_wrench[4] / right_wrench[2],right_wrench[3] / right_wrench[2]]
 
         # Express the local zmps in homogeneous coordinates
         LF_r_zmp_L_homogenous = np.array([LF_r_zmp_L[0], LF_r_zmp_L[1], 0, 1])
         RF_r_zmp_R_homogenous = np.array([RF_r_zmp_R[0], RF_r_zmp_R[1], 0, 1])
 
         # Retrieve the global transform of the feet frames
-        W_H_LF = (
-            self.kindyn.getWorldTransform(self.robot_model.left_foot_frame)
-            .asHomogeneousTransform()
-            .toNumPy()
-        )
-        W_H_RF = (
-            self.kindyn.getWorldTransform(self.robot_model.right_foot_frame)
-            .asHomogeneousTransform()
-            .toNumPy()
+        W_H_LF = (self.kindyn.getWorldTransform(self.robot_model.left_foot_frame).asHomogeneousTransform().toNumPy())
+        W_H_RF = (self.kindyn.getWorldTransform(self.robot_model.right_foot_frame).asHomogeneousTransform().toNumPy()
         )
 
         # Express the local zmps (one per foot) in a common reference frame (i.e. the world frame)
