@@ -3,12 +3,15 @@ import mujoco
 import math
 import numpy as np
 import mujoco_viewer
-import copy 
+import copy
+import casadi as cs
+
 
 class MujocoSimulator(Simulator):
     def __init__(self) -> None:
         self.desired_pos = None
         self.postion_control = False
+        self.compute_misalignment_gravity_fun()
         super().__init__()
 
     def load_model(self, robot_model, s, xyz_rpy, kv_motors=None, Im=None):
@@ -31,6 +34,12 @@ class MujocoSimulator(Simulator):
         self.H_left_foot_num = None 
         self.H_right_foot_num = None 
 
+    def get_contact_status(self):
+        left_wrench, rigth_wrench = self.get_feet_wrench()
+        left_foot_contact = left_wrench[2] > 5
+        right_foot_contact = rigth_wrench[2] > 5
+        return left_foot_contact, right_foot_contact
+
     def set_visualize_robot_flag(self, visualize_robot):
         self.visualize_robot_flag = visualize_robot
         if self.visualize_robot_flag:
@@ -38,7 +47,7 @@ class MujocoSimulator(Simulator):
 
     def set_base_pose_in_mujoco(self, xyz_rpy):
         base_xyz_quat = np.zeros(7)
-        base_xyz_quat[:3] = xyz_rpy[:3]
+        base_xyz_quat[:3] = xyz_rpy[:3] + 0.0001
         base_xyz_quat[3:] = self.RPY_to_quat(xyz_rpy[3], xyz_rpy[4], xyz_rpy[5])
         base_xyz_quat[2] = base_xyz_quat[2]
         self.data.qpos[:7] = base_xyz_quat
@@ -98,6 +107,33 @@ class MujocoSimulator(Simulator):
         if self.visualize_robot_flag:
             self.viewer.render()
 
+    def compute_misalignment_gravity_fun(self):
+        H = cs.SX.sym("H", 4, 4)
+        theta = cs.SX.sym("theta")
+        theta = cs.dot([0, 0, 1], H[:3, 2]) - 1
+        error = cs.Function("error", [H], [theta])
+        self.error_mis = error
+
+    def check_feet_status(self, s, H_b):
+        left_foot_pose = self.robot_model.H_left_foot(H_b, s)
+        rigth_foot_pose = self.robot_model.H_right_foot(H_b, s)
+        left_foot_z = left_foot_pose[2, 3]
+        rigth_foot_z = rigth_foot_pose[2, 3]
+        left_foot_contact = not (left_foot_z > 0.1)
+        rigth_foot_contact = not (rigth_foot_z > 0.1)
+        misalignment_left = self.error_mis(left_foot_pose)
+        misalignment_rigth = self.error_mis(rigth_foot_pose)
+        left_foot_condition = abs(left_foot_contact * misalignment_left)
+        rigth_foot_condition = abs(rigth_foot_contact * misalignment_rigth)
+        misalignment_error = left_foot_condition + rigth_foot_condition
+        if (
+            abs(left_foot_contact * misalignment_left) > 0.02
+            or abs(rigth_foot_contact * misalignment_rigth) > 0.02
+        ):
+            return False, misalignment_error
+
+        return True, misalignment_error
+
     def get_feet_wrench(self):
         left_foot_wrench = np.zeros(6)
         rigth_foot_wrench = np.zeros(6)
@@ -106,32 +142,37 @@ class MujocoSimulator(Simulator):
             contact = self.data.contact[i]
             c_array = np.zeros(6, dtype=np.float64)
             mujoco.mj_contactForce(self.model, self.data, i, c_array)
-            name_contact = mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_GEOM, int(contact.geom[1]))
+            name_contact = mujoco.mj_id2name(
+                self.model, mujoco.mjtObj.mjOBJ_GEOM, int(contact.geom[1])
+            )
             w_H_contact = np.eye(4)
-            w_H_contact[:3,:3] = contact.frame.reshape(3, 3)
-            w_H_contact[:3,3] = contact.pos
-            if name_contact == self.robot_model.right_foot_rear_ct or name_contact == self.robot_model.right_foot_front_ct:
-                RF_H_contact = np.linalg.inv(self.H_right_foot_num)@w_H_contact
-                wrench_RF = self.compute_resulting_wrench(RF_H_contact,c_array)
+            w_H_contact[:3, :3] = contact.frame.reshape(3, 3)
+            w_H_contact[:3, 3] = contact.pos
+            if (
+                name_contact == self.robot_model.right_foot_rear_ct
+                or name_contact == self.robot_model.right_foot_front_ct
+            ):
+                RF_H_contact = np.linalg.inv(self.H_right_foot_num) @ w_H_contact
+                wrench_RF = self.compute_resulting_wrench(RF_H_contact, c_array)
                 rigth_foot_wrench[:] += wrench_RF.reshape(6)
-            elif name_contact == self.robot_model.left_foot_front_ct or name_contact == self.robot_model.left_foot_rear_ct:
-                LF_H_contact = np.linalg.inv(self.H_left_foot_num)@w_H_contact
-                wrench_LF = self.compute_resulting_wrench(LF_H_contact,c_array)
+            elif (
+                name_contact == self.robot_model.left_foot_front_ct
+                or name_contact == self.robot_model.left_foot_rear_ct
+            ):
+                LF_H_contact = np.linalg.inv(self.H_left_foot_num) @ w_H_contact
+                wrench_LF = self.compute_resulting_wrench(LF_H_contact, c_array)
                 left_foot_wrench[:] += wrench_LF.reshape(6)
-        return (
-            left_foot_wrench, rigth_foot_wrench
-        )
-
+        return (left_foot_wrench, rigth_foot_wrench)
     def compute_resulting_wrench(self, b_H_a, force_torque_a):
-        p = b_H_a[:3,3]
-        R = b_H_a[:3,:3] 
-        adjoint_matrix = np.zeros([6,6])
-        adjoint_matrix[:3,:3] = R 
-        adjoint_matrix[3:,:3] = np.cross(p,R)
-        adjoint_matrix[3:,3:] = R
-        force_torque_b = adjoint_matrix@force_torque_a.reshape(6,1)
+        p = b_H_a[:3, 3]
+        R = b_H_a[:3, :3]
+        adjoint_matrix = np.zeros([6, 6])
+        adjoint_matrix[:3, :3] = R
+        adjoint_matrix[3:, :3] = np.cross(p, R)
+        adjoint_matrix[3:, 3:] = R
+        force_torque_b = adjoint_matrix @ force_torque_a.reshape(6, 1)
         return force_torque_b
- 
+
     # note that for mujoco the ordering is w,x,y,z
     def get_base(self):
         indexes_joint = self.model.jnt_qposadr[1:]
@@ -181,8 +222,8 @@ class MujocoSimulator(Simulator):
         s_dot = self.data.qvel[indexes_joint_velocities[0] :]
         tau = self.data.ctrl
         H_b = self.get_base()
-        self.H_left_foot_num = np.array(self.H_left_foot(H_b,s))
-        self.H_right_foot_num = np.array(self.H_right_foot(H_b,s))
+        self.H_left_foot_num = np.array(self.H_left_foot(H_b, s))
+        self.H_right_foot_num = np.array(self.H_right_foot(H_b, s))
         return s, s_dot, tau
 
     def close(self):

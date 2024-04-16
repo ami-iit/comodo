@@ -13,7 +13,9 @@ class CentroidalMPC(Planner):
         self.dT = timedelta(milliseconds=frequency_ms)
         self.dT_in_seconds = frequency_ms / 1000
         self.contact_planner = FootPositionPlanner(
-            robot_model=robot_model, dT=timedelta(seconds=self.dT_in_seconds), step_length=step_length
+            robot_model=robot_model,
+            dT=timedelta(seconds=self.dT_in_seconds),
+            step_length=step_length,
         )
         self.centroidal_mpc = blf.reduced_model_controllers.CentroidalMPC()
         scaling = 1.0
@@ -72,7 +74,10 @@ class CentroidalMPC(Planner):
         self.mpc_param_handler = blf.parameters_handler.StdParametersHandler()
         self.mpc_param_handler.set_parameter_datetime("sampling_time", self.dT)
         self.mpc_param_handler.set_parameter_datetime("time_horizon", time_horizon)
-        self.mpc_param_handler.set_parameter_float("contact_force_symmetry_weight", mpc_parameters.contact_force_symmetry_weight)
+        self.mpc_param_handler.set_parameter_float(
+            "contact_force_symmetry_weight",
+            mpc_parameters.contact_force_symmetry_weight,
+        )
         self.mpc_param_handler.set_parameter_int("verbosity", 0)
         self.mpc_param_handler.set_parameter_int("number_of_maximum_contacts", 2)
         self.mpc_param_handler.set_parameter_int("number_of_slices", 1)

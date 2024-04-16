@@ -12,6 +12,7 @@ import copy
 import resolve_robotics_uri_py as rru
 from pathlib import Path
 
+
 class RobotModel(KinDynComputations):
     def __init__(
         self,
@@ -51,9 +52,9 @@ class RobotModel(KinDynComputations):
         self.right_foot_frame = right_foot
         self.torso_link = torso
         self.right_foot_rear_ct = right_foot_rear_link_name + self.collision_keyword
-        self.right_foot_front_ct = right_foot_front_link_name+ self.collision_keyword
+        self.right_foot_front_ct = right_foot_front_link_name + self.collision_keyword
         self.left_foot_rear_ct = left_foot_rear_link_name + self.collision_keyword
-        self.left_foot_front_ct = left_foot_front_link_name+ self.collision_keyword
+        self.left_foot_front_ct = left_foot_front_link_name + self.collision_keyword
 
         self.remote_control_board_list = [
             "/" + self.robot_name + "/torso",
@@ -77,6 +78,8 @@ class RobotModel(KinDynComputations):
         path_temp_xml = tempfile.NamedTemporaryFile(mode="w+")
         path_temp_xml.write(urdfstring)
         super().__init__(path_temp_xml.name, self.joint_name_list, self.base_link)
+        self.H_left_foot = self.forward_kinematics_fun(self.left_foot_frame)
+        self.H_right_foot = self.forward_kinematics_fun(self.right_foot_frame)
 
     def override_control_boar_list(self, remote_control_board_list: list):
         self.remote_control_board_list = remote_control_board_list
@@ -115,12 +118,9 @@ class RobotModel(KinDynComputations):
         self.solver = cs.Opti()
         self.solver.solver("ipopt", p_opts, s_opts)
 
-
         self.w_H_torso = self.forward_kinematics_fun(self.torso_link)
         self.s = self.solver.variable(self.NDoF)  # joint positions
         self.quat_pose_b = self.solver.variable(7)
-        self.H_left_foot = self.forward_kinematics_fun(self.left_foot_frame) #TODO declare only if needed 
-        self.H_right_foot = self.forward_kinematics_fun(self.right_foot_frame)
         left_foot_pos = np.asarray([0.000267595, 0.0801685, 0.0])
         left_foot_rotation = np.eye(3)
         right_foot_pos = np.asarray([-0.000139057, -0.0803188, 0.0])
@@ -211,51 +211,55 @@ class RobotModel(KinDynComputations):
         return cs.vertcat(w, x, y, z)
 
     def get_mujoco_urdf_string(self):
-        ## We first start by ET 
+        ## We first start by ET
         tempFileOut = tempfile.NamedTemporaryFile(mode="w+")
         tempFileOut.write(copy.deepcopy(self.urdf_string))
         root = ET.fromstring(self.urdf_string)
 
         # Declaring as fixed the not controlled joints
-        for joint in root.findall('.//joint'): 
-            joint_name = joint.attrib.get('name')
-            if(joint_name not in self.joint_name_list):
-                joint.set('type', 'fixed')
+        for joint in root.findall(".//joint"):
+            joint_name = joint.attrib.get("name")
+            if joint_name not in self.joint_name_list:
+                joint.set("type", "fixed")
 
-        new_link = ET.Element('link')
-        new_link.set('name', "world")
+        new_link = ET.Element("link")
+        new_link.set("name", "world")
         root.append(new_link)
-        floating_joint = ET.Element('joint')
-        floating_joint.set('name', "floating_joint")
-        floating_joint.set('type', "floating")
+        floating_joint = ET.Element("joint")
+        floating_joint.set("name", "floating_joint")
+        floating_joint.set("type", "floating")
         # Create parent element
-        parent = ET.Element('parent')
-        parent.set('link', "world")
+        parent = ET.Element("parent")
+        parent.set("link", "world")
         floating_joint.append(parent)
 
         # Create child element
-        child = ET.Element('child')
-        child.set('link', self.base_link)
+        child = ET.Element("child")
+        child.set("link", self.base_link)
         floating_joint.append(child)
 
         # Append the new joint element to the root
         root.append(floating_joint)
-        
-        ## Adding the name to the collision and link visual 
-        for link in root.findall('.//link'):
-            link_name = link.attrib.get('name')
+
+        ## Adding the name to the collision and link visual
+        for link in root.findall(".//link"):
+            link_name = link.attrib.get("name")
             # Check if a collision element with a name exists
-            collision_elements = link.findall('./collision')
-            if not any(collision.find('name') is not None for collision in collision_elements):
+            collision_elements = link.findall("./collision")
+            if not any(
+                collision.find("name") is not None for collision in collision_elements
+            ):
                 # If no collision element with a name exists, add one
                 if collision_elements:
                     # If there are collision elements, append name to the first one
-                    collision_elements[0].set('name',link_name+ self.collision_keyword )
-            visual_elements = link.findall('./visual')
-            if not any(visual.find('name') is not None for visual in visual_elements):
+                    collision_elements[0].set(
+                        "name", link_name + self.collision_keyword
+                    )
+            visual_elements = link.findall("./visual")
+            if not any(visual.find("name") is not None for visual in visual_elements):
                 # If no collision element with a name exists, add one
                 if visual_elements:
-                    visual_elements[0].set('name', link_name+ self.visual_keyword)
+                    visual_elements[0].set("name", link_name + self.visual_keyword)
         meshes = self.get_mesh_path(root)
         robot_el = None
         for elem in root.iter():
@@ -265,7 +269,8 @@ class RobotModel(KinDynComputations):
         mujoco_el = ET.Element("mujoco")
         compiler_el = ET.Element("compiler")
         compiler_el.set("discardvisual", "false")
-        if not(meshes is None) : compiler_el.set("meshdir",str(meshes))
+        if not (meshes is None):
+            compiler_el.set("meshdir", str(meshes))
         mujoco_el.append(compiler_el)
         robot_el.append(mujoco_el)
         # # Convert the XML tree to a string
@@ -277,8 +282,8 @@ class RobotModel(KinDynComputations):
         # return "ciao"
         # # urdf_string = urdf_mujoco_file.read()
         mujoco_model = mujoco.MjModel.from_xml_string(urdf_string)
-        
-# 
+
+        #
         path_temp_xml = tempfile.NamedTemporaryFile(mode="w+")
         mujoco.mj_saveLastXML(path_temp_xml.name, mujoco_model)
 
@@ -378,10 +383,6 @@ class RobotModel(KinDynComputations):
         floor.set("condim", "3")
         world_elem.append(floor)
         new_xml = ET.tostring(tree.getroot(), encoding="unicode")
-
-        self.H_left_foot = self.forward_kinematics_fun(self.left_foot_frame)
-        self.H_right_foot = self.forward_kinematics_fun(self.right_foot_frame)
-
         return new_xml
 
     def get_base_pose_from_contacts(self, s, contact_frames_pose: dict):
@@ -516,7 +517,7 @@ class RobotModel(KinDynComputations):
         """
         # find the mesh path
         mesh = robot_urdf.find(".//mesh")
-        if(mesh is None):
+        if mesh is None:
             return None
         path = mesh.attrib["filename"]
         mesh_path = rru.resolve_robotics_uri(path).parent
