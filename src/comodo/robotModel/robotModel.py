@@ -66,10 +66,10 @@ class RobotModel(KinDynComputations):
 
         self.kp_position_control = np.concatenate(
             (legs_gain_kp, legs_gain_kp, arms_gain_kp, arms_gain_kp)
-        )
+        ) #TODO 
         self.kd_position_control = np.concatenate(
             (legs_gain_kd, legs_gain_kd, arms_gain_kd, arms_gain_kd)
-        )
+        ) #TODO 
         self.ki_position_control = 10 * self.kd_position_control
         self.gravity = iDynTree.Vector3()
         self.gravity.zero()
@@ -215,12 +215,14 @@ class RobotModel(KinDynComputations):
         tempFileOut = tempfile.NamedTemporaryFile(mode="w+")
         tempFileOut.write(copy.deepcopy(self.urdf_string))
         root = ET.fromstring(self.urdf_string)
-
+        self.mujoco_joint_order = []
         # Declaring as fixed the not controlled joints
         for joint in root.findall(".//joint"):
             joint_name = joint.attrib.get("name")
             if joint_name not in self.joint_name_list:
                 joint.set("type", "fixed")
+            else:
+                self.mujoco_joint_order.append(joint_name)
 
         new_link = ET.Element("link")
         new_link.set("name", "world")
@@ -279,11 +281,8 @@ class RobotModel(KinDynComputations):
 
     def get_mujoco_model(self):
         urdf_string = self.get_mujoco_urdf_string()
-        # return "ciao"
-        # # urdf_string = urdf_mujoco_file.read()
-        mujoco_model = mujoco.MjModel.from_xml_string(urdf_string)
 
-        #
+        mujoco_model = mujoco.MjModel.from_xml_string(urdf_string)
         path_temp_xml = tempfile.NamedTemporaryFile(mode="w+")
         mujoco.mj_saveLastXML(path_temp_xml.name, mujoco_model)
 

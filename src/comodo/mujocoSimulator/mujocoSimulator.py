@@ -16,9 +16,12 @@ class MujocoSimulator(Simulator):
 
     def load_model(self, robot_model, s, xyz_rpy, kv_motors=None, Im=None):
         self.robot_model = robot_model
+        
         mujoco_xml = robot_model.get_mujoco_model()
         self.model = mujoco.MjModel.from_xml_string(mujoco_xml)
         self.data = mujoco.MjData(self.model)
+        self.create_mapping_vector_from_mujoco()
+        self.create_mapping_vector_to_mujoco()
         mujoco.mj_forward(self.model, self.data)
         self.set_joint_vector_in_mujoco(s)
         self.set_base_pose_in_mujoco(xyz_rpy=xyz_rpy)
@@ -53,25 +56,56 @@ class MujocoSimulator(Simulator):
         self.data.qpos[:7] = base_xyz_quat
 
     def set_joint_vector_in_mujoco(self, pos):
+        pos_muj = self.convert_vector_to_mujoco(pos)
         indexes_joint = self.model.jnt_qposadr[1:]
         for i in range(self.robot_model.NDoF):
-            self.data.qpos[indexes_joint[i]] = pos[i]
+            self.data.qpos[indexes_joint[i]] = pos_muj[i]
 
     def set_input(self, input):
-        self.data.ctrl = input
-        np.copyto(self.data.ctrl, input)
+        input_muj = self.convert_vector_to_mujoco(input)
+        self.data.ctrl = input_muj
+        np.copyto(self.data.ctrl, input_muj)
 
     def set_position_input(self, pos):
-        self.desired_pos = pos
+        pos_muj = self.convert_vector_to_mujoco(pos)
+        self.desired_pos = pos_muj
         self.postion_control = True
+
+    def create_mapping_vector_to_mujoco(self):
+        # This function creates the to_mujoco map
+        self.to_mujoco = []
+        for mujoco_joint in self.robot_model.mujoco_joint_order:
+            try:
+                index = self.robot_model.joint_name_list.index(mujoco_joint)
+                self.to_mujoco.append(index)
+            except ValueError:
+                raise ValueError(f"Mujoco joint '{mujoco_joint}' not found in joint list.")
+        
+    def create_mapping_vector_from_mujoco(self):
+        # This function creates the to_mujoco map
+        self.from_mujoco = []
+        for joint in self.robot_model.joint_name_list:
+            try:
+                index = self.robot_model.mujoco_joint_order.index(joint)
+                self.from_mujoco.append(index)
+            except ValueError:
+                raise ValueError(f"Joint name list  joint '{joint}' not found in mujoco list.")
+        
+    def convert_vector_to_mujoco (self, array_in): 
+        out_muj = np.asarray([array_in[self.to_mujoco[item]] for item in range(self.robot_model.NDoF)]) 
+        return out_muj
+    
+    def convert_from_mujoco(self, array_muj):
+        out_classic = np.asarray([array_muj[self.from_mujoco[item]] for item in range(self.robot_model.NDoF)]) 
+        return out_classic
 
     def step(self, n_step=1, visualize=True):
         if self.postion_control:
             for _ in range(n_step):
-                s, s_dot, tau = self.get_state()
+                s, s_dot, tau = self.get_state(use_mujoco_convention=True)
                 ctrl = (
-                    self.robot_model.kp_position_control * (self.desired_pos - s)
-                    - self.robot_model.kd_position_control * s_dot
+                    self.convert_vector_to_mujoco(self.robot_model.kp_position_control) * (self.desired_pos - s)
+                    - self.convert_vector_to_mujoco(self.robot_model.kd_position_control) * s_dot
                 )
                 self.data.ctrl = ctrl
                 np.copyto(self.data.ctrl, ctrl)
@@ -95,9 +129,9 @@ class MujocoSimulator(Simulator):
             s_dot = self.data.qvel[indexes_joint_acceleration[0] :]
             input = np.asarray(
                 [
-                    self.Im[item] * s_dot_dot[item]
-                    + self.kv_motors[item] * s_dot[item]
-                    + torque[item]
+                    self.Im[self.to_mujoco[item]] * s_dot_dot[item]
+                    + self.kv_motors[self.to_mujoco[item]] * s_dot[item]
+                    + torque[self.to_mujoco[item]]
                     for item in range(self.robot_model.NDoF)
                 ]
             )
@@ -163,6 +197,7 @@ class MujocoSimulator(Simulator):
                 wrench_LF = self.compute_resulting_wrench(LF_H_contact, c_array)
                 left_foot_wrench[:] += wrench_LF.reshape(6)
         return (left_foot_wrench, rigth_foot_wrench)
+    
     def compute_resulting_wrench(self, b_H_a, force_torque_a):
         p = b_H_a[:3, 3]
         R = b_H_a[:3, :3]
@@ -215,7 +250,7 @@ class MujocoSimulator(Simulator):
         indexes_joint_velocities = self.model.jnt_dofadr[1:]
         return self.data.qvel[: indexes_joint_velocities[0]]
 
-    def get_state(self):
+    def get_state(self, use_mujoco_convention = False):
         indexes_joint = self.model.jnt_qposadr[1:]
         indexes_joint_velocities = self.model.jnt_dofadr[1:]
         s = self.data.qpos[indexes_joint[0] :]
@@ -224,7 +259,14 @@ class MujocoSimulator(Simulator):
         H_b = self.get_base()
         self.H_left_foot_num = np.array(self.H_left_foot(H_b, s))
         self.H_right_foot_num = np.array(self.H_right_foot(H_b, s))
-        return s, s_dot, tau
+        
+        if(use_mujoco_convention):
+            return s,s_dot, tau 
+         
+        s_out = self.convert_from_mujoco(s)
+        s_dot_out = self.convert_from_mujoco(s_dot)
+        tau_out = self.convert_from_mujoco(tau)
+        return s_out, s_dot_out, tau_out
 
     def close(self):
         if self.visualize_robot_flag:
