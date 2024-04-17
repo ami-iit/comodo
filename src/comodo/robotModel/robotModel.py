@@ -261,7 +261,7 @@ class RobotModel(KinDynComputations):
             compiler_el.set("meshdir", str(meshes))
         mujoco_el.append(compiler_el)
         robot_el.append(mujoco_el)
-        # # Convert the XML tree to a string
+        # Convert the XML tree to a string
         robot_urdf_string_original = ET.tostring(root)
         return robot_urdf_string_original
 

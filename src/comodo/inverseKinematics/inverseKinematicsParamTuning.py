@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class InverseKinematicParamTuning:
+class InverseKinematicsParamTuning:
     def __init__(self) -> None:
         self.zmp_gain = [0.4, 0.4]
         self.com_gain = [4.3, 4.3]
@@ -10,7 +10,7 @@ class InverseKinematicParamTuning:
         self.com_linear = 2.59
         self.chest_angular = 1.4
         self.root_linear = 2.8
-        self.Kp_joint_tracking = 5.0
+        self.kp_joint_tracking = 5.0
         self.weigth_joint = [
             1.0,
             1.0,

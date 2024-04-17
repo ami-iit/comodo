@@ -36,11 +36,13 @@ class MujocoSimulator(Simulator):
         self.H_right_foot = copy.deepcopy(self.robot_model.H_right_foot)
         self.H_left_foot_num = None 
         self.H_right_foot_num = None 
+        self.mass = self.robot_model.get_total_mass()
+
 
     def get_contact_status(self):
         left_wrench, rigth_wrench = self.get_feet_wrench()
-        left_foot_contact = left_wrench[2] > 5
-        right_foot_contact = rigth_wrench[2] > 5
+        left_foot_contact = left_wrench[2] > 0.1*self.mass
+        right_foot_contact = rigth_wrench[2] > 0.1*self.mass
         return left_foot_contact, right_foot_contact
 
     def set_visualize_robot_flag(self, visualize_robot):

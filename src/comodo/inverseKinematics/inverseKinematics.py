@@ -1,6 +1,6 @@
 from comodo.abstractClasses.controller import Controller
-from comodo.inverseKinematic.inverseKinematicParamTuning import (
-    InverseKinematicParamTuning,
+from comodo.inverseKinematics.inverseKinematicsParamTuning import (
+    InverseKinematicsParamTuning,
 )
 import bipedal_locomotion_framework as blf
 import numpy as np
@@ -11,7 +11,7 @@ import datetime
 from scipy.spatial.transform import Rotation
 
 
-class InverseKinematic(Controller):
+class InverseKinematics(Controller):
     def __init__(self, frequency, robot_model) -> None:
         self.gravity = iDynTree.Vector3()
         self.gravity.zero()
@@ -20,7 +20,7 @@ class InverseKinematic(Controller):
         self.com_fun = robot_model.CoM_position_fun()
         super().__init__(frequency, robot_model)
 
-    def define_tasks(self, parameters: InverseKinematicParamTuning):
+    def define_tasks(self, parameters: InverseKinematicsParamTuning):
         self.robot_velocity_name = "robotVelocity"
 
         # # Set the parameters ik
@@ -67,7 +67,7 @@ class InverseKinematic(Controller):
         )
         joint_tracking_param_handler.set_parameter_vector_float(
             name="kp",
-            value=parameters.Kp_joint_tracking * np.ones(self.robot_model.NDoF),
+            value=parameters.kp_joint_tracking * np.ones(self.robot_model.NDoF),
         )
 
         # # Initialize the task
@@ -190,7 +190,7 @@ class InverseKinematic(Controller):
         self.solver.finalize(qp_ik_var_handler)
         self.define_zmp_controller(parameters=parameters)
 
-    def define_zmp_controller(self, parameters: InverseKinematicParamTuning):
+    def define_zmp_controller(self, parameters: InverseKinematicsParamTuning):
         self.zmp_controller = blf.simplified_model_controllers.CoMZMPController()
         controller_param_handler = blf.parameters_handler.StdParametersHandler()
         controller_param_handler.set_parameter_vector_float(
