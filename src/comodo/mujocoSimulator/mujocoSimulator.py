@@ -16,7 +16,7 @@ class MujocoSimulator(Simulator):
 
     def load_model(self, robot_model, s, xyz_rpy, kv_motors=None, Im=None):
         self.robot_model = robot_model
-        
+
         mujoco_xml = robot_model.get_mujoco_model()
         self.model = mujoco.MjModel.from_xml_string(mujoco_xml)
         self.data = mujoco.MjData(self.model)
@@ -34,8 +34,8 @@ class MujocoSimulator(Simulator):
         )
         self.H_left_foot = copy.deepcopy(self.robot_model.H_left_foot)
         self.H_right_foot = copy.deepcopy(self.robot_model.H_right_foot)
-        self.H_left_foot_num = None 
-        self.H_right_foot_num = None 
+        self.H_left_foot_num = None
+        self.H_right_foot_num = None
 
     def get_contact_status(self):
         left_wrench, rigth_wrench = self.get_feet_wrench()
@@ -79,8 +79,10 @@ class MujocoSimulator(Simulator):
                 index = self.robot_model.joint_name_list.index(mujoco_joint)
                 self.to_mujoco.append(index)
             except ValueError:
-                raise ValueError(f"Mujoco joint '{mujoco_joint}' not found in joint list.")
-        
+                raise ValueError(
+                    f"Mujoco joint '{mujoco_joint}' not found in joint list."
+                )
+
     def create_mapping_vector_from_mujoco(self):
         # This function creates the to_mujoco map
         self.from_mujoco = []
@@ -89,26 +91,33 @@ class MujocoSimulator(Simulator):
                 index = self.robot_model.mujoco_joint_order.index(joint)
                 self.from_mujoco.append(index)
             except ValueError:
-                raise ValueError(f"Joint name list  joint '{joint}' not found in mujoco list.")
-        
-    def convert_vector_to_mujoco (self, array_in): 
-        out_muj = np.asarray([array_in[self.to_mujoco[item]] for item in range(self.robot_model.NDoF)]) 
+                raise ValueError(
+                    f"Joint name list  joint '{joint}' not found in mujoco list."
+                )
+
+    def convert_vector_to_mujoco(self, array_in):
+        out_muj = np.asarray(
+            [array_in[self.to_mujoco[item]] for item in range(self.robot_model.NDoF)]
+        )
         return out_muj
-    
+
     def convert_from_mujoco(self, array_muj):
-        out_classic = np.asarray([array_muj[self.from_mujoco[item]] for item in range(self.robot_model.NDoF)]) 
+        out_classic = np.asarray(
+            [array_muj[self.from_mujoco[item]] for item in range(self.robot_model.NDoF)]
+        )
         return out_classic
 
     def step(self, n_step=1, visualize=True):
         if self.postion_control:
             for _ in range(n_step):
                 s, s_dot, tau = self.get_state(use_mujoco_convention=True)
-                kp_muj = self.convert_vector_to_mujoco(self.robot_model.kp_position_control)
-                kd_muj = self.convert_vector_to_mujoco(self.robot_model.kd_position_control)
-                ctrl = (
-                    kp_muj * (self.desired_pos - s)
-                    - kd_muj * s_dot
+                kp_muj = self.convert_vector_to_mujoco(
+                    self.robot_model.kp_position_control
                 )
+                kd_muj = self.convert_vector_to_mujoco(
+                    self.robot_model.kd_position_control
+                )
+                ctrl = kp_muj * (self.desired_pos - s) - kd_muj * s_dot
                 self.data.ctrl = ctrl
                 np.copyto(self.data.ctrl, ctrl)
                 mujoco.mj_step(self.model, self.data)
@@ -173,7 +182,7 @@ class MujocoSimulator(Simulator):
     def get_feet_wrench(self):
         left_foot_wrench = np.zeros(6)
         rigth_foot_wrench = np.zeros(6)
-        s,s_dot, tau = self.get_state()
+        s, s_dot, tau = self.get_state()
         H_b = self.get_base()
         self.H_left_foot_num = np.array(self.H_left_foot(H_b, s))
         self.H_right_foot_num = np.array(self.H_right_foot(H_b, s))
@@ -202,7 +211,7 @@ class MujocoSimulator(Simulator):
                 wrench_LF = self.compute_resulting_wrench(LF_H_contact, c_array)
                 left_foot_wrench[:] += wrench_LF.reshape(6)
         return (left_foot_wrench, rigth_foot_wrench)
-    
+
     def compute_resulting_wrench(self, b_H_a, force_torque_a):
         p = b_H_a[:3, 3]
         R = b_H_a[:3, :3]
@@ -255,14 +264,14 @@ class MujocoSimulator(Simulator):
         indexes_joint_velocities = self.model.jnt_dofadr[1:]
         return self.data.qvel[: indexes_joint_velocities[0]]
 
-    def get_state(self, use_mujoco_convention = False):
+    def get_state(self, use_mujoco_convention=False):
         indexes_joint = self.model.jnt_qposadr[1:]
         indexes_joint_velocities = self.model.jnt_dofadr[1:]
         s = self.data.qpos[indexes_joint[0] :]
         s_dot = self.data.qvel[indexes_joint_velocities[0] :]
         tau = self.data.ctrl
-        if(use_mujoco_convention):
-            return s,s_dot,tau 
+        if use_mujoco_convention:
+            return s, s_dot, tau
         s_out = self.convert_from_mujoco(s)
         s_dot_out = self.convert_from_mujoco(s_dot)
         tau_out = self.convert_from_mujoco(tau)

@@ -23,14 +23,60 @@ class RobotModel(KinDynComputations):
         left_foot: str = "l_sole",
         right_foot: str = "r_sole",
         torso: str = "chest",
+        left_hand: str = "l_hand",
+        rigth_hand: str = "r_hand",
         right_foot_rear_link_name: str = "r_foot_rear",
         right_foot_front_link_name: str = "r_foot_front",
         left_foot_rear_link_name: str = "l_foot_rear",
         left_foot_front_link_name: str = "l_foot_front",
         kp_pos_control: np.float32 = np.array(
-            [35 * 70.0, 35 * 70.0, 35 * 40.0, 35 * 100.0, 35 * 100.0, 35 * 100.0,35 * 70.0, 35 * 70.0, 35 * 40.0, 35 * 100.0, 35 * 100.0, 35 * 100.0,20 * 5.745, 20 * 5.745, 20 * 5.745, 20 * 1.745,20 * 5.745, 20 * 5.745, 20 * 5.745, 20 * 1.745]
+            [
+                35 * 70.0,
+                35 * 70.0,
+                35 * 40.0,
+                35 * 100.0,
+                35 * 100.0,
+                35 * 100.0,
+                35 * 70.0,
+                35 * 70.0,
+                35 * 40.0,
+                35 * 100.0,
+                35 * 100.0,
+                35 * 100.0,
+                20 * 5.745,
+                20 * 5.745,
+                20 * 5.745,
+                20 * 1.745,
+                20 * 5.745,
+                20 * 5.745,
+                20 * 5.745,
+                20 * 1.745,
+            ]
         ),
-        kd_pos_control: np.float32= np.array([15 * 0.15, 15 * 0.15, 15 * 0.35, 15 * 0.15, 15 * 0.15, 15 * 0.15,15 * 0.15, 15 * 0.15, 15 * 0.35, 15 * 0.15, 15 * 0.15, 15 * 0.15,4 * 5.745, 4 * 5.745, 4 * 5.745, 4 * 1.745,4 * 5.745, 4 * 5.745, 4 * 5.745, 4 * 1.745])
+        kd_pos_control: np.float32 = np.array(
+            [
+                15 * 0.15,
+                15 * 0.15,
+                15 * 0.35,
+                15 * 0.15,
+                15 * 0.15,
+                15 * 0.15,
+                15 * 0.15,
+                15 * 0.15,
+                15 * 0.35,
+                15 * 0.15,
+                15 * 0.15,
+                15 * 0.15,
+                4 * 5.745,
+                4 * 5.745,
+                4 * 5.745,
+                4 * 1.745,
+                4 * 5.745,
+                4 * 5.745,
+                4 * 5.745,
+                4 * 1.745,
+            ]
+        ),
     ) -> None:
         self.collision_keyword = "_collision"
         self.visual_keyword = "_visual"
@@ -40,6 +86,8 @@ class RobotModel(KinDynComputations):
         self.base_link = base_link
         self.left_foot_frame = left_foot
         self.right_foot_frame = right_foot
+        self.rigth_hand = rigth_hand
+        self.left_hand = left_hand
         self.torso_link = torso
         self.right_foot_rear_ct = right_foot_rear_link_name + self.collision_keyword
         self.right_foot_front_ct = right_foot_front_link_name + self.collision_keyword
@@ -55,7 +103,7 @@ class RobotModel(KinDynComputations):
         ]
 
         self.kp_position_control = kp_pos_control
-        self.kd_position_control = kd_pos_control 
+        self.kd_position_control = kd_pos_control
         self.ki_position_control = 10 * self.kd_position_control
         self.gravity = iDynTree.Vector3()
         self.gravity.zero()
@@ -69,6 +117,71 @@ class RobotModel(KinDynComputations):
 
     def override_control_boar_list(self, remote_control_board_list: list):
         self.remote_control_board_list = remote_control_board_list
+
+    def get_initial_configuration(self):
+        # TODO change to be generica 
+        base_position_init = np.array([-0.0489, 0, 0.65])
+        base_orientationQuat_init = np.array([0, 0, 0, 1])
+        base_orientationQuat_position_init = np.concatenate(
+            (base_orientationQuat_init, base_position_init), axis=0
+        )
+
+        s_init = {
+            "torso_pitch": -3,
+            "torso_roll": 0,
+            "torso_yaw": 0,
+            "l_shoulder_pitch": -35.97,
+            "l_shoulder_roll": 29.97,
+            "l_shoulder_yaw": 0.006,
+            "l_elbow": 50,
+            "r_shoulder_pitch": -35.97,
+            "r_shoulder_roll": 29.97,
+            "r_shoulder_yaw": 0.006,
+            "r_elbow": 50,
+            "l_hip_pitch": 12,
+            "l_hip_roll": 5,
+            "l_hip_yaw": 0,
+            "l_knee": -10,
+            "l_ankle_pitch": -1.6,
+            "l_ankle_roll": -5,
+            "r_hip_pitch": 12,
+            "r_hip_roll": 5,
+            "r_hip_yaw": 0,
+            "r_knee": -10,
+            "r_ankle_pitch": -1.6,
+            "r_ankle_roll": -5,
+        }
+
+        return [s_init, base_orientationQuat_position_init]
+
+    def get_joint_limits(self):
+        # TODO change to be generic 
+        joints_limits = {
+            "torso_pitch": [-0.3141592653589793, 0.7853981633974483],
+            "torso_roll": [-0.4014257279586958, 0.4014257279586958],
+            "torso_yaw": [-0.7504915783575618, 0.7504915783575618],
+            "l_shoulder_pitch": [-1.53588974175501, 0.22689280275926285],
+            "l_shoulder_roll": [0.20943951023931956, 2.8448866807507573],
+            "l_shoulder_yaw": [-0.8726646259971648, 1.3962634015954636],
+            "l_elbow": [0.3, 1.3089969389957472],
+            "r_shoulder_pitch": [-1.53588974175501, 0.22689280275926285],
+            "r_shoulder_roll": [0.20943951023931956, 2.8448866807507573],
+            "r_shoulder_yaw": [-0.8726646259971648, 1.3962634015954636],
+            "r_elbow": [0.3, 1.3089969389957472],
+            "l_hip_pitch": [-0.7853981633974483, 2.007128639793479],
+            "l_hip_roll": [-0.17453292519943295, 2.007128639793479],
+            "l_hip_yaw": [-1.3962634015954636, 1.3962634015954636],
+            "l_knee": [-1.2, -0.4],
+            "l_ankle_pitch": [-0.7853981633974483, 0.7853981633974483],
+            "l_ankle_roll": [-0.4363323129985824, 0.4363323129985824],
+            "r_hip_pitch": [-0.7853981633974483, 2.007128639793479],
+            "r_hip_roll": [-0.17453292519943295, 2.007128639793479],
+            "r_hip_yaw": [-1.3962634015954636, 1.3962634015954636],
+            "r_knee": [-1.2, -0.4],
+            "r_ankle_pitch": [-0.7853981633974483, 0.7853981633974483],
+            "r_ankle_roll": [-0.4363323129985824, 0.4363323129985824],
+        }
+        return joints_limits
 
     def set_limbs_indexes(
         self,
@@ -188,7 +301,7 @@ class RobotModel(KinDynComputations):
         z = (R[1, 0] - R[0, 1]) / S
 
         # Normalize the quaternion
-        length = cs.sqrt(w**2 + x**2 + y**2 + z**2)
+        length = cs.sqrt(w ** 2 + x ** 2 + y ** 2 + z ** 2)
         w /= length
         x /= length
         y /= length
