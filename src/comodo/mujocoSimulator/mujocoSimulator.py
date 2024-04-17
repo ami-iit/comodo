@@ -103,9 +103,11 @@ class MujocoSimulator(Simulator):
         if self.postion_control:
             for _ in range(n_step):
                 s, s_dot, tau = self.get_state(use_mujoco_convention=True)
+                kp_muj = self.convert_vector_to_mujoco(self.robot_model.kp_position_control)
+                kd_muj = self.convert_vector_to_mujoco(self.robot_model.kd_position_control)
                 ctrl = (
-                    self.convert_vector_to_mujoco(self.robot_model.kp_position_control) * (self.desired_pos - s)
-                    - self.convert_vector_to_mujoco(self.robot_model.kd_position_control) * s_dot
+                    kp_muj * (self.desired_pos - s)
+                    - kd_muj * s_dot
                 )
                 self.data.ctrl = ctrl
                 np.copyto(self.data.ctrl, ctrl)
@@ -171,7 +173,10 @@ class MujocoSimulator(Simulator):
     def get_feet_wrench(self):
         left_foot_wrench = np.zeros(6)
         rigth_foot_wrench = np.zeros(6)
-
+        s,s_dot, tau = self.get_state()
+        H_b = self.get_base()
+        self.H_left_foot_num = np.array(self.H_left_foot(H_b, s))
+        self.H_right_foot_num = np.array(self.H_right_foot(H_b, s))
         for i in range(self.data.ncon):
             contact = self.data.contact[i]
             c_array = np.zeros(6, dtype=np.float64)
@@ -256,13 +261,8 @@ class MujocoSimulator(Simulator):
         s = self.data.qpos[indexes_joint[0] :]
         s_dot = self.data.qvel[indexes_joint_velocities[0] :]
         tau = self.data.ctrl
-        H_b = self.get_base()
-        self.H_left_foot_num = np.array(self.H_left_foot(H_b, s))
-        self.H_right_foot_num = np.array(self.H_right_foot(H_b, s))
-        
         if(use_mujoco_convention):
-            return s,s_dot, tau 
-         
+            return s,s_dot,tau 
         s_out = self.convert_from_mujoco(s)
         s_dot_out = self.convert_from_mujoco(s_dot)
         tau_out = self.convert_from_mujoco(tau)

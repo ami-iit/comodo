@@ -27,20 +27,10 @@ class RobotModel(KinDynComputations):
         right_foot_front_link_name: str = "r_foot_front",
         left_foot_rear_link_name: str = "l_foot_rear",
         left_foot_front_link_name: str = "l_foot_front",
-        legs_gain_kp: np.float32 = np.array(
-            [35 * 70.0, 35 * 70.0, 35 * 40.0, 35 * 100.0, 35 * 100.0, 35 * 100.0]
+        kp_pos_control: np.float32 = np.array(
+            [35 * 70.0, 35 * 70.0, 35 * 40.0, 35 * 100.0, 35 * 100.0, 35 * 100.0,35 * 70.0, 35 * 70.0, 35 * 40.0, 35 * 100.0, 35 * 100.0, 35 * 100.0,20 * 5.745, 20 * 5.745, 20 * 5.745, 20 * 1.745,20 * 5.745, 20 * 5.745, 20 * 5.745, 20 * 1.745]
         ),
-        arms_gain_kp: np.float32 = np.array(
-            [20 * 5.745, 20 * 5.745, 20 * 5.745, 20 * 1.745]
-        ),
-        torso_gain_kp: np.float32 = np.array([100, 120, 120]),
-        legs_gain_kd: np.float32 = np.array(
-            [15 * 0.15, 15 * 0.15, 15 * 0.35, 15 * 0.15, 15 * 0.15, 15 * 0.15]
-        ),
-        arms_gain_kd: np.float32 = np.array(
-            [4 * 5.745, 4 * 5.745, 4 * 5.745, 4 * 1.745]
-        ),
-        torso_gain_kd: np.float32 = np.array([10, 10, 10]),
+        kd_pos_control: np.float32= np.array([15 * 0.15, 15 * 0.15, 15 * 0.35, 15 * 0.15, 15 * 0.15, 15 * 0.15,15 * 0.15, 15 * 0.15, 15 * 0.35, 15 * 0.15, 15 * 0.15, 15 * 0.15,4 * 5.745, 4 * 5.745, 4 * 5.745, 4 * 1.745,4 * 5.745, 4 * 5.745, 4 * 5.745, 4 * 1.745])
     ) -> None:
         self.collision_keyword = "_collision"
         self.visual_keyword = "_visual"
@@ -64,12 +54,8 @@ class RobotModel(KinDynComputations):
             "/" + self.robot_name + "/right_leg",
         ]
 
-        self.kp_position_control = np.concatenate(
-            (legs_gain_kp, legs_gain_kp, arms_gain_kp, arms_gain_kp)
-        ) #TODO 
-        self.kd_position_control = np.concatenate(
-            (legs_gain_kd, legs_gain_kd, arms_gain_kd, arms_gain_kd)
-        ) #TODO 
+        self.kp_position_control = kp_pos_control
+        self.kd_position_control = kd_pos_control 
         self.ki_position_control = 10 * self.kd_position_control
         self.gravity = iDynTree.Vector3()
         self.gravity.zero()
@@ -297,7 +283,7 @@ class RobotModel(KinDynComputations):
                 break
         actuator_entry = ET.Element("actuator")
 
-        for name_joint in self.joint_name_list:
+        for name_joint in self.mujoco_joint_order:
             new_motor_entry = ET.Element("motor")
             new_motor_entry.set("name", name_joint)
             new_motor_entry.set("joint", name_joint)
