@@ -1,0 +1,10 @@
+<mujoco model="box">
+  <compiler angle="radian"/>
+  <worldbody>
+    <geom name="base_link_collision" size="0.25 0.25 0.0125" type="box"/>
+    <geom name="side1_left_dummy_link_collision" size="0.005 0.005 0.005" pos="-0.25 0.2 0.025" type="box"/>
+    <geom name="side1_right_dummy_link_collision" size="0.005 0.005 0.005" pos="-0.25 -0.2 0.025" type="box"/>
+    <geom name="side2_left_dummy_link_collision" size="0.005 0.005 0.005" pos="0.25 0.2 0.025" type="box"/>
+    <geom name="side2_right_dummy_link_collision" size="0.005 0.005 0.005" pos="0.25 -0.2 0.025" type="box"/>
+  </worldbody>
+</mujoco>

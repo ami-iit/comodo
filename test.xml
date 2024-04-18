@@ -1,0 +1,196 @@
+<mujoco model="stickBot">
+  <compiler angle="radian"/>
+   <default> 
+  <default class="pos_control">
+      <joint damping="1" frictionloss="1"/>
+      <general biastype="affine" gainprm="1000" biasprm="0 -1000 -100" forcerange="-30 30"/>
+  </default>
+</default>
+  <worldbody>
+    <body name="root_link">
+      <inertial pos="0.00131675 0.000355722 0.212213" quat="0.999969 -0.00197143 0.00661264 -0.00382259" mass="16.1368" diaginertia="2.62122 2.61922 2.13268"/>
+      <geom name="root_link_visual" pos="0 0 0.1785" size="0.0465 0.0475 0.071" quat="0.707107 0 0 -0.707107" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="0 1 0 1"/>
+      <geom name="torso_1_visual" size="0.0405 0.062 0.07525" pos="0 0 0.075" quat="0.707107 0 0 -0.707107" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 0 1"/>
+      <geom name="torso_2_visual" size="0.0678 0.04485 0.0669" pos="0 0 0.1394" quat="0.707107 0 0 -0.707107" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="1 0 0 1"/>
+      <geom name="chest_visual" size="0.10205 0.1076 0.1046" pos="0 0 0.228358" quat="0.707107 0 0 -0.707107" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 1 1"/>
+      <geom name="neck_1_visual" size="0.033 0.0445" pos="0.00021151 0 0.34027" quat="0.707107 -0.707107 0 0" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1"/>
+      <geom name="neck_2_visual" size="0.027 0.0065" pos="-0.0151385 0 0.36927" quat="0.5 -0.5 0.5 -0.5" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 0.8 1"/>
+      <geom name="neck_3_visual" size="0.0225 0.045" pos="0.00486151 0 0.391771" quat="0.707107 0 0 -0.707107" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="0.1 0.8 0.1 1"/>
+      <geom name="head_visual" size="0.08" pos="0.00486151 0 0.457921" quat="0.5 -0.5 0.5 -0.5" contype="0" conaffinity="0" group="1" density="0"/>
+      <geom name="camera_tilt_visual" size="0.03 0.045" pos="0.0603745 0.00017 0.509846" quat="3.27579e-05 3.27581e-05 0.707105 -0.707108" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 1 1"/>
+      <geom name="lidar_visual" size="0.04 0.02" pos="0.00603151 0.00115 0.559721" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 1 1"/>
+      <body name="r_shoulder_1" pos="-0.03 -0.055555 0.29997" quat="0.983506 -0.125212 -0.0164845 0.129481">
+        <inertial pos="0 -0.07445 0" mass="1.38072" diaginertia="0.01 0.01 0.01"/>
+        <joint name="r_shoulder_pitch" pos="0 0 0" axis="0 1 0" limited="true" range="-1.53589 0.226893" damping="2"/>
+        <geom name="r_shoulder_1_visual" size="0.04 0.07845" pos="0 -0.07445 0" quat="0.485098 0.512419 0.479256 -0.521939" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 0 1"/>
+        <body name="r_shoulder_2" pos="0.00748901 -0.1115 0.000402786" quat="0.995835 0.0871243 -0.0267684 0.00234193">
+          <inertial pos="-0.00305096 9.75647e-08 -0.0286392" quat="0.998592 1.69137e-06 0.0530405 -8.98378e-08" mass="0.549329" diaginertia="0.0205674 0.0205674 0.02"/>
+          <joint name="r_shoulder_roll" pos="0 0 0" axis="-1 4.2105e-08 2.46305e-08" limited="true" range="0.20944 2.79253" damping="2"/>
+          <geom name="r_shoulder_2_visual" size="0.06" quat="0.603545 0.00311654 0.0471955 -0.795925" contype="0" conaffinity="0" group="1" density="0" rgba="1 0 1 1"/>
+          <geom name="r_shoulder_3_visual" size="0.03 0.015" pos="-0.00684995 2.1905e-07 -0.0643" quat="0.603545 0.00311654 0.0471955 -0.795925" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="0 1 1 1"/>
+          <body name="r_upper_arm" pos="-0.00684995 6.40883e-07 -0.0767999">
+            <inertial pos="0 0 -0.05705" mass="1.96045" diaginertia="0.01 0.01 0.01"/>
+            <joint name="r_shoulder_yaw" pos="0 0 0" axis="-3.78762e-08 2.8052e-08 1" limited="true" range="-0.872665 1.39626" damping="2"/>
+            <geom name="r_upper_arm_visual" size="0.05 0.07905" pos="0 0 -0.05705" quat="0.603337 0 0 -0.797486" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="0 1 0 1"/>
+            <body name="r_elbow_1" pos="0.00999993 0.00149964 -0.1237">
+              <inertial pos="-0.014313 -0.000805461 -0.112239" quat="0.588619 -0.0560695 -0.0525394 0.804751" mass="1.35433" diaginertia="0.0466957 0.0466639 0.040032"/>
+              <joint name="r_elbow" pos="0 0 0" axis="2.49496e-07 -1 2.79425e-08" limited="true" range="-0.0523599 1.309" damping="2"/>
+              <geom name="r_elbow_1_visual" size="0.04" pos="-0.02 0 -0.02" quat="0.603545 0.00311654 0.0471955 -0.795925" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1"/>
+              <geom name="r_forearm_visual" size="0.05 0.07905" pos="-0.0199999 -0.00199965 -0.0953101" quat="0.603337 0 0 -0.797486" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 0.8 1"/>
+              <geom name="r_forearm_collision" size="0.05 0.07905" pos="-0.0199999 -0.00199965 -0.0953101" quat="0.603337 0 0 -0.797486" type="cylinder" rgba="0 0 0.8 1"/>
+              <geom name="r_wrist_1_visual" size="0.011 0.02" pos="-0.0136999 -0.00400709 -0.1628" quat="0.0640871 0.782371 0.0678384 -0.615781" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="0.1 0.8 0.1 1"/>
+              <geom name="r_hand_visual" size="0.062 0.0368 0.08105" pos="0.00999996 0.0029923 -0.24385" type="box" contype="0" conaffinity="0" group="1" density="0"/>
+              <geom name="r_hand_collision" size="0.062 0.0368 0.08105" pos="0.00999996 0.0029923 -0.24385" type="box"/>
+              <body name="box_link_rigth" pos="0.0 0.2 -0.34">
+              <inertial pos="0 0 0" quat="1.0 0.0 0.0 0.0" mass="5" diaginertia="0.0833 0.0418 0.0418"/>
+              <!--<joint name="box_joint" pos="0.0 0.0 0.0" axis="1 0 0" range="-0.001 0" limited="true"/>-->
+              <geom name="base_link_collision_rigth" size="0.15 0.15 0.0125" type="box"/>
+              <!-- <geom name="side1_left_dummy_link_collision_rigth" size="0.005 0.005 0.005" pos="-0.15 0.2 0.025" type="box"/> -->
+              <!-- <geom name="side1_right_dummy_link_collision_rigth" size="0.005 0.005 0.005" pos="-0.15 -0.2 0.025" type="box"/> -->
+              <!-- <geom name="side2_left_dummy_link_collision_rigth" size="0.005 0.005 0.005" pos="0.15 0.2 0.025" type="box"/> -->
+              <!-- <geom name="side2_right_dummy_link_collision_rigth" size="0.005 0.005 0.005" pos="0.15 -0.2 0.025" type="box"/>   -->
+                </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="l_shoulder_1" pos="-0.03 0.055555 0.29997" quat="0.983506 0.125212 -0.0164845 -0.129481">
+        <inertial pos="0 0.07445 0" mass="1.37669" diaginertia="0.01 0.01 0.01"/>
+        <joint name="l_shoulder_pitch" pos="0 0 0" axis="0 1 0" limited="true" range="-1.53589 0.226893" damping="2"/>
+        <geom name="l_shoulder_1_visual" size="0.04 0.07845" pos="0 0.07445 0" quat="0.485098 -0.512419 0.479256 0.521939" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="0 1 0 1"/>
+        <body name="l_shoulder_2" pos="0.00748901 0.1115 0.000402786" quat="0.995835 -0.0871243 -0.0267684 -0.00234193">
+          <inertial pos="-0.00192682 1.60899e-07 -0.0284806" quat="0.99943 2.81664e-06 0.0337689 -9.51693e-08" mass="0.546898" diaginertia="0.0205605 0.0205605 0.02"/>
+          <joint name="l_shoulder_roll" pos="0 0 0" axis="1 2.03483e-07 -4.02302e-08" limited="true" range="0.20944 2.79253" damping="2"/>
+          <geom name="l_shoulder_2_visual" size="0.06" quat="0.795925 -0.0471955 -0.00311656 -0.603545" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 0 1"/>
+          <geom name="l_shoulder_3_visual" size="0.03 0.015" pos="-0.00435013 3.63257e-07 -0.0643" quat="0.795925 -0.0471955 -0.00311656 -0.603545" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="1 0 0 1"/>
+          <body name="l_upper_arm" pos="-0.00435013 -6.01952e-08 -0.0768">
+            <inertial pos="0 0 -0.05705" mass="1.96833" diaginertia="0.01 0.01 0.01"/>
+            <joint name="l_shoulder_yaw" pos="0 0 0" axis="2.22765e-08 -4.39379e-08 -1" limited="true" range="-0.872665 1.39626" damping="2"/>
+            <geom name="l_upper_arm_visual" size="0.05 0.07905" pos="0 0 -0.05705" quat="0.797486 0 0 -0.603337" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 1 1"/>
+            <body name="l_elbow_1" pos="0.00999993 -0.00149965 -0.1237">
+              <inertial pos="-0.0142815 0.000810948 -0.112111" quat="0.8039 -0.053065 -0.0566185 0.589681" mass="1.35825" diaginertia="0.0466904 0.0466582 0.0400325"/>
+              <joint name="l_elbow" pos="0 0 0" axis="-8.81182e-08 -1 4.40473e-08" limited="true" range="-0.0523599 1.309" damping="2"/>
+              <geom name="l_elbow_1_visual" size="0.04" pos="-0.02 0 -0.02" quat="0.795925 -0.0471955 -0.00311656 -0.603545" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 0 1"/>
+              <geom name="l_forearm_visual" size="0.05 0.07905" pos="-0.0199999 0.00199964 -0.0953101" quat="0.797486 0 0 -0.603337" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="1 0 1 1"/>
+              <geom name="l_forearm_collision" size="0.05 0.07905" pos="-0.0199999 0.00199964 -0.0953101" quat="0.797486 0 0 -0.603337" type="cylinder" rgba="1 0 1 1"/>
+              <geom name="l_wrist_1_visual" size="0.011 0.02" pos="-0.0133999 0.00400654 -0.1628" quat="0.0640871 0.782371 0.0678384 -0.615781" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="0 1 1 1"/>
+              <geom name="l_hand_visual" size="0.062 0.0368 0.08105" pos="0.0103 -0.00299285 -0.24385" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="0 1 0 1"/>
+              <geom name="l_hand_collision" size="0.062 0.0368 0.08105" pos="0.0103 -0.00299285 -0.24385" type="box" rgba="0 1 0 1"/>
+              <body name="box_link_left" pos="0.0 -0.2 -0.34">
+                <inertial pos="0 0 0" quat="0.0 0.0 0.0 1.0" mass="5" diaginertia="0.0833 0.0418 0.0418"/>
+                <!--<joint name="box_joint" pos="0.0 0.0 0.0" axis="1 0 0" range="-0.001 0" limited="true"/>-->
+                <geom name="base_link_collision" size="0.15 0.15 0.0125" type="box"/>
+                <!-- <geom name="side1_left_dummy_link_collision" size="0.005 0.005 0.005" pos="-0.15 0.2 0.025" type="box"/> -->
+                <!-- <geom name="side1_right_dummy_link_collision" size="0.005 0.005 0.005" pos="-0.15 -0.2 0.025" type="box"/> -->
+                <!-- <geom name="side2_left_dummy_link_collision" size="0.005 0.005 0.005" pos="0.15 0.2 0.025" type="box"/> -->
+                <!-- <geom name="side2_right_dummy_link_collision" size="0.005 0.005 0.005" pos="0.15 -0.2 0.025" type="box"/>              </body> -->
+            </body> 
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="r_hip_1" pos="0.0216 -0.04055 0">
+        <inertial pos="-0.01 -0.041826 -0.01" mass="2.13429" diaginertia="0.01 0.01 0.01"/>
+        <joint name="r_hip_pitch" pos="0 0 0" axis="0 -1 0" limited="true" range="-0.785398 2.00713" damping="2"/>
+        <geom name="r_hip_1_visual" size="0.0535 0.041826" pos="-0.01 -0.041826 -0.01" quat="0.5 0.5 0.5 -0.5" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="0 1 0 1"/>
+        <body name="r_hip_2" pos="-0.0473 -0.0331 -0.009">
+          <inertial pos="0.0291726 0 -0.0976103" quat="0.706337 -0.0329792 -0.0329792 0.706337" mass="3.94684" diaginertia="0.0449673 0.0449105 0.0200567"/>
+          <joint name="r_hip_roll" pos="0 0 0" axis="-1 0 0" limited="true" range="-0.174533 2.00713" damping="2"/>
+          <geom name="r_hip_2_visual" size="0.0351 0.0789 0.06575" pos="0.02 0 -0.02" quat="0.707107 0 0 -0.707107" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 0 1"/>
+          <geom name="r_hip_3_visual" size="0.075 0.1296" pos="0.0367 0 -0.1613" quat="0.707107 0 0 -0.707107" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="1 0 0 1"/>
+          <body name="r_upper_leg" pos="0.0367 0.015 -0.2038">
+            <inertial pos="0 0 -0.07" mass="0.980692" diaginertia="0.01 0.01 0.01"/>
+            <joint name="r_hip_yaw" pos="0 0 0" axis="0 0 -1" limited="true" range="-1.39626 1.39626" damping="2"/>
+            <geom name="r_upper_leg_visual" size="0.0454 0.0799 0.0439" pos="0 0 -0.07" quat="0.707107 -0.707107 0 0" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 1 1"/>
+            <body name="r_lower_leg" pos="0.015 -0.0249 -0.1062">
+              <inertial pos="-0.02 0.015 -0.15" mass="5.07411" diaginertia="0.0297152 0.0297152 0.010719"/>
+              <joint name="r_knee" pos="0 0 0" axis="0 -1 0" limited="true" range="-1.22173 0.0872665" damping="2"/>
+              <geom name="r_lower_leg_visual" size="0.065 0.12" pos="-0.02 0.015 -0.15" quat="0.707107 0 0 -0.707107" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 0 1"/>
+              <body name="r_ankle_1" pos="0 0.0005 -0.295989">
+                <inertial pos="0 0.01 -0.015" mass="0.346177" diaginertia="0.01 0.01 0.01"/>
+                <joint name="r_ankle_pitch" pos="0 0 0" axis="0 1 0" limited="true" range="-0.785398 0.785398" damping="2"/>
+                <geom name="r_ankle_1_visual" size="0.0426035 0.0300837 0.07127" pos="0 0.01 -0.015" quat="0.707107 0 0.707107 0" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="1 0 1 1"/>
+                <body name="r_ankle_2" pos="-0.05275 0.0182 -0.035">
+                  <inertial pos="0.0689704 0 -0.0436578" quat="0.664208 -0.242545 -0.242545 0.664208" mass="2.3588" diaginertia="1.03294 1.03194 1.03099"/>
+                  <joint name="r_ankle_roll" pos="0 0 0" axis="-1 0 0" limited="true" range="-0.436332 0.436332" damping="2"/>
+                  <geom name="r_ankle_2_visual" size="0.04635 0.0317 0.10275" pos="0.06 0 -0.014" quat="0.707107 0 0.707107 0" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="0 1 1 1"/>
+                  <geom name="r_foot_front_visual" size="0.05 0.0585 0.00515" pos="0.13525 0 -0.0658" quat="0.707107 0 0 -0.707107" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="0 1 0 1"/>
+                  <geom name="r_foot_front_collision" size="0.05 0.0585 0.00515" pos="0.13525 0 -0.0658" quat="0.707107 0 0 -0.707107" type="box" rgba="0 1 0 1"/>
+                  <geom name="r_foot_rear_visual" size="0.05 0.0585 0.00515" pos="0.016 0 -0.0658" quat="0.707107 0 0 -0.707107" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 1 1"/>
+                  <geom name="r_foot_rear_collision" size="0.05 0.0585 0.00515" pos="0.016 0 -0.0658" quat="0.707107 0 0 -0.707107" type="box" rgba="1 1 1 1"/>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="l_hip_1" pos="0.0216 0.04045 0">
+        <inertial pos="-0.01 0.041826 -0.01" mass="2.10846" diaginertia="0.01 0.01 0.01"/>
+        <joint name="l_hip_pitch" pos="0 0 0" axis="0 -1 0" limited="true" range="-0.785398 2.00713" damping="2"/>
+        <geom name="l_hip_1_visual" size="0.0535 0.041826" pos="-0.01 0.041826 -0.01" quat="0.5 0.5 0.5 -0.5" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 0.8 1"/>
+        <body name="l_hip_2" pos="-0.04725 0.0331 -0.009">
+          <inertial pos="0.0291699 0 -0.0975869" quat="0.706338 -0.0329738 -0.0329738 0.706338" mass="3.95042" diaginertia="0.0449957 0.0449389 0.0200568"/>
+          <joint name="l_hip_roll" pos="0 0 0" axis="1 0 0" limited="true" range="-0.174533 2.00713" damping="2"/>
+          <geom name="l_hip_2_visual" size="0.0351 0.0789 0.06575" pos="0.02 0 -0.02" quat="0.707107 0 0 -0.707107" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="0.1 0.8 0.1 1"/>
+          <geom name="l_hip_3_visual" size="0.075 0.1296" pos="0.0367 0 -0.1613" quat="0.707107 0 0 -0.707107" type="cylinder" contype="0" conaffinity="0" group="1" density="0"/>
+          <body name="l_upper_leg" pos="0.0367 -0.015 -0.2038">
+            <inertial pos="0 0 -0.07" mass="0.968264" diaginertia="0.01 0.01 0.01"/>
+            <joint name="l_hip_yaw" pos="0 0 0" axis="0 0 1" limited="true" range="-1.39626 1.39626" damping="2"/>
+            <geom name="l_upper_leg_visual" size="0.0454 0.0799 0.0439" pos="0 0 -0.07" quat="0.707107 -0.707107 0 0" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="0 1 0 1"/>
+            <body name="l_lower_leg" pos="0.015 0.0249 -0.1062">
+              <inertial pos="-0.02 -0.015 -0.15" mass="5.06305" diaginertia="0.0296505 0.0296505 0.0106957"/>
+              <joint name="l_knee" pos="0 0 0" axis="0 -1 0" limited="true" range="-1.22173 0.0872665" damping="2"/>
+              <geom name="l_lower_leg_visual" size="0.065 0.12" pos="-0.02 -0.015 -0.15" quat="0.707107 0 0 -0.707107" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 0 1"/>
+              <body name="l_ankle_1" pos="0 -0.0005 -0.295989">
+                <inertial pos="0 -0.01 -0.015" mass="0.346177" diaginertia="0.01 0.01 0.01"/>
+                <joint name="l_ankle_pitch" pos="0 0 0" axis="0 1 0" limited="true" range="-0.785398 0.785398" damping="2"/>
+                <geom name="l_ankle_1_visual" size="0.0426035 0.0300837 0.07127" pos="0 -0.01 -0.015" quat="0.707107 0 0.707107 0" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="1 0 0 1"/>
+                <body name="l_ankle_2" pos="-0.05275 -0.0182 -0.035">
+                  <inertial pos="0.0689444 0 -0.0436087" quat="0.664561 -0.241576 -0.241576 0.664561" mass="2.36117" diaginertia="1.03294 1.03194 1.03099"/>
+                  <joint name="l_ankle_roll" pos="0 0 0" axis="1 0 0" limited="true" range="-0.436332 0.436332" damping="2"/>
+                  <geom name="l_ankle_2_visual" size="0.04635 0.0317 0.10275" pos="0.06 0 -0.014" quat="0.707107 0 0.707107 0" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 1 1"/>
+                  <geom name="l_foot_rear_visual" size="0.05 0.0585 0.00515" pos="0.016 0 -0.0658" quat="0.707107 0 0 -0.707107" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="1 1 0 1"/>
+                  <geom name="l_foot_rear_collision" size="0.05 0.0585 0.00515" pos="0.016 0 -0.0658" quat="0.707107 0 0 -0.707107" type="box" rgba="1 1 0 1"/>
+                  <geom name="l_foot_front_visual" size="0.05 0.0585 0.00515" pos="0.13525 0 -0.0658" quat="0.707107 0 0 -0.707107" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="1 0 1 1"/>
+                  <geom name="l_foot_front_collision" size="0.05 0.0585 0.00515" pos="0.13525 0 -0.0658" quat="0.707107 0 0 -0.707107" type="box" rgba="1 0 1 1"/>
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+  <actuator>
+ <general class = "pos_control" name="r_hip_pitch" joint="r_hip_pitch"  ctrlrange="-0.785398 2.00713" />
+ <general class = "pos_control" name="r_hip_roll" joint="r_hip_roll"  ctrlrange="-100 100" />
+ <general class = "pos_control" name="r_hip_yaw" joint="r_hip_yaw"  ctrlrange="-100 100" />
+ <general class = "pos_control" name="r_knee" joint="r_knee"  ctrlrange="-100 100" />
+ <general class = "pos_control" name="r_ankle_pitch" joint="r_ankle_pitch"  ctrlrange="-100 100" />
+ <general class = "pos_control" name="r_ankle_roll" joint="r_ankle_roll"  ctrlrange="-100 100" />
+ <general class = "pos_control" name="l_hip_pitch" joint="l_hip_pitch"  ctrlrange="-100 100" />
+ <general class = "pos_control" name="l_hip_roll" joint="l_hip_roll"  ctrlrange="-100 100" />
+ <general class = "pos_control" name="l_hip_yaw" joint="l_hip_yaw"  ctrlrange="-100 100" />
+ <general class = "pos_control" name="l_knee" joint="l_knee"  ctrlrange="-100 100" />
+ <general class = "pos_control" name="l_ankle_pitch" joint="l_ankle_pitch"  ctrlrange="-100 100" />
+ <general class = "pos_control" name="l_ankle_roll" joint="l_ankle_roll"  ctrlrange="-100 100" />
+ <general class = "pos_control" name="r_shoulder_pitch" joint="r_shoulder_pitch"  ctrlrange="-100 100" />
+ <general class = "pos_control" name="r_shoulder_roll" joint="r_shoulder_roll"  ctrlrange="-100 100" />
+ <general class = "pos_control" name="r_shoulder_yaw" joint="r_shoulder_yaw"  ctrlrange="-100 100" />
+ <general class = "pos_control" name="r_elbow" joint="r_elbow"  ctrlrange="-100 100" />
+ <general class = "pos_control" name="l_shoulder_pitch" joint="l_shoulder_pitch"  ctrlrange="-100 100" />
+ <general class = "pos_control" name="l_shoulder_roll" joint="l_shoulder_roll"  ctrlrange="-100 100" />
+ <general class = "pos_control" name="l_shoulder_yaw" joint="l_shoulder_yaw"  ctrlrange="-100 100" />
+ <general class = "pos_control" name="l_elbow" joint="l_elbow" ctrlrange="-100 100" />
+ 
+ </actuator> 
+ 
+  <equality>
+  <!-- <connect body1="box_link" body2="r_elbow_1" anchor=" -0.2 -0.2 -0.48"/> -->
+  <!-- <connect body1="box_link" body2="l_elbow_1" anchor=" -0.2 0.2 -0.32"/> -->
+  <connect body1="box_link_left" body2="box_link_rigth" anchor=" 0.2 0.2 0.0"/>
+    <connect body1="box_link_left" body2="box_link_rigth" anchor=" -0.2 -0.2 0.0"/>
+  <!-- <connect body1="left-achilles-rod" body2="left-heel-spring" anchor="0.5012 0 0"/> -->
+</equality>
+ <asset><texture type="skybox" builtin="gradient" rgb1=".3 .5 .7" rgb2="0 0 0" width="32" height="512" /><texture name="body" type="cube" builtin="flat" mark="cross" rgb1="0.8 0.6 0.4" rgb2="0.8 0.6 0.4" width="127" height="1278" markrgb="1 1 1" random="0.01" /><texture name="grid" type="2d" builtin="checker" rgb1=".1 .2 .3" rgb2=".2 .3 .4" width="512" height="512" /><material name="body" texture="body" texuniform="true" rgba="0.8 0.6 .4 1" /><material name="grid" texture="grid" texrepeat="1 1" texuniform="true" reflectance=".2" /></asset></mujoco>
+</mujoco>
