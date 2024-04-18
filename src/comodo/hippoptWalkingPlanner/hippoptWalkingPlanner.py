@@ -16,8 +16,8 @@ import hippopt.turnkey_planners.humanoid_pose_finder.planner as pose_finder
 
 
 class HippoptWalkingPlanner(Planner):
-    def __init__(self, robot_model, urdf_path) -> None:
-        self.urdf_path = urdf_path
+    def __init__(self, robot_model) -> None:
+        self.urdf_path = robot_model.urdf_string
         super().__init__(robot_model)
 
     def plan_trajectory(self):

@@ -61,9 +61,7 @@ class RobotModel(KinDynComputations):
         self.gravity.zero()
         self.gravity.setVal(2, -9.81)
         self.H_b = iDynTree.Transform()
-        path_temp_xml = tempfile.NamedTemporaryFile(mode="w+")
-        path_temp_xml.write(urdfstring)
-        super().__init__(path_temp_xml.name, self.joint_name_list, self.base_link)
+        super().__init__(urdfstring, self.joint_name_list, self.base_link)
         self.H_left_foot = self.forward_kinematics_fun(self.left_foot_frame)
         self.H_right_foot = self.forward_kinematics_fun(self.right_foot_frame)
 
