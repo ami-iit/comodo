@@ -1,5 +1,5 @@
 from comodo.abstractClasses.planner import Planner
-
+from comodo.hippoptWalkingPlanner.hippoptWalkingPlannerParameterTuning import HippoptWalkingParameterTuning
 import logging
 
 import casadi as cs
@@ -13,8 +13,7 @@ import hippopt.turnkey_planners.humanoid_kinodynamic.planner as walking_planner
 import hippopt.turnkey_planners.humanoid_kinodynamic.settings as walking_settings
 import hippopt.turnkey_planners.humanoid_kinodynamic.variables as walking_variables
 import hippopt.turnkey_planners.humanoid_pose_finder.planner as pose_finder
-
-
+from hippopt.robot_planning.variables.contacts import ContactPointDescriptor
 class HippoptWalkingPlanner(Planner):
     def __init__(self, robot_model) -> None:
         self.urdf_path = robot_model.urdf_string
@@ -27,7 +26,26 @@ class HippoptWalkingPlanner(Planner):
         self.left_contact_points = [s.contact_points.left for s in self.humanoid_states]
         self.right_contact_points = [s.contact_points.right for s in self.humanoid_states]
 
-    def get_planner_settings(self, time_step) -> walking_settings.Settings:
+    def from_robot_model_to_contact_descriptor(self, foot_frame): 
+        return [
+            ContactPointDescriptor(
+                input_foot_frame=foot_frame,
+                input_position_in_foot_frame=self.robot_model.corner_0,
+            ),
+            ContactPointDescriptor(
+                input_foot_frame=foot_frame,
+                input_position_in_foot_frame=self.robot_model.corner_1,
+            ),
+            ContactPointDescriptor(
+                input_foot_frame=foot_frame,
+                input_position_in_foot_frame=self.robot_model.corner_2,
+            ),
+            ContactPointDescriptor(
+                input_foot_frame=foot_frame,
+                input_position_in_foot_frame=self.robot_model.corner_3,
+            ),
+        ]
+    def get_planner_settings(self, paramters:HippoptWalkingParameterTuning) -> walking_settings.Settings:
         settings = walking_settings.Settings()
         settings.robot_urdf = str(self.urdf_path)
         settings.joints_name_list = self.robot_model.joint_name_list
@@ -38,21 +56,13 @@ class HippoptWalkingPlanner(Planner):
         )
         idyntree_model = idyntree_model_loader.model()
         settings.root_link = self.robot_model.base_link
-        settings.horizon_length = 30
-        settings.time_step = time_step
+        settings.horizon_length = paramters.horizon_length
+        settings.time_step = paramters.step_length
         settings.contact_points = hp_rp.FeetContactPointDescriptors()
-        settings.contact_points.left = hp_rp.ContactPointDescriptor.rectangular_foot(
-            foot_frame=self.robot_model.left_foot_frame,
-            x_length=0.232,
-            y_length=0.1,
-            top_left_point_position=np.array([0.116, 0.05, 0.0]),  # TODO
-        )
-        settings.contact_points.right = hp_rp.ContactPointDescriptor.rectangular_foot(
-            foot_frame=self.robot_model.right_foot_frame,
-            x_length=0.232,
-            y_length=0.1,
-            top_left_point_position=np.array([0.116, 0.05, 0.0]),  # TODO
-        )
+        settings.contact_points.left = self.from_robot_model_to_contact_descriptor(self.robot_model.left_foot_frame)
+        settings.contact_points.right = self.from_robot_model_to_contact_descriptor(self.robot_model.right_foot_frame)
+        
+        print(settings.contact_points.right)
         settings.planar_dcc_height_multiplier = 10.0
         settings.dcc_gain = 40.0
         settings.dcc_epsilon = 0.005
@@ -164,7 +174,7 @@ class HippoptWalkingPlanner(Planner):
         self, input_settings: walking_settings.Settings
     ) -> hp_rp.HumanoidStateVisualizerSettings:
         output_viz_settings = hp_rp.HumanoidStateVisualizerSettings()
-        output_viz_settings.robot_model = input_settings.robot_urdf
+        output_viz_settings.robot_model = self.planner.get_adam_model()
         output_viz_settings.considered_joints = input_settings.joints_name_list
         output_viz_settings.contact_points = input_settings.contact_points
         output_viz_settings.terrain = input_settings.terrain
@@ -179,33 +189,7 @@ class HippoptWalkingPlanner(Planner):
         desired_left_foot_pose: liecasadi.SE3,
         desired_right_foot_pose: liecasadi.SE3,
     ) -> hp_rp.HumanoidState:
-        desired_joints = np.deg2rad(
-            [
-                7,
-                0.12,
-                -0.01,
-                12.0,
-                7.0,
-                -12.0,
-                40.769,
-                12.0,
-                7.0,
-                -12.0,
-                40.769,
-                5.76,
-                1.61,
-                -0.31,
-                -31.64,
-                -20.52,
-                -1.52,
-                5.76,
-                1.61,
-                -0.31,
-                -31.64,
-                -20.52,
-                -1.52,
-            ]
-        )
+        desired_joints = self.robot_model.s_init
         assert len(input_settings.joints_name_list) == len(desired_joints)
 
         pf_ref = pose_finder.References(
@@ -251,7 +235,7 @@ class HippoptWalkingPlanner(Planner):
         desired_com_position = (
             desired_left_foot_pose.translation() + desired_right_foot_pose.translation()
         ) / 2.0
-        desired_com_position[2] = 0.7  # TODO
+        desired_com_position[2] = self.robot_model.compute_com_init()[2] # TODO
         output_pf = self.compute_state(
             input_settings=input_settings,
             pf_input=pf_input,
@@ -280,7 +264,7 @@ class HippoptWalkingPlanner(Planner):
         desired_com_position = (
             desired_left_foot_pose.translation() + desired_right_foot_pose.translation()
         ) / 2.0
-        desired_com_position[2] = 0.7  # TODO
+        desired_com_position[2] = self.robot_model.compute_com_init()[2]  # TODO
         return self.compute_state(
             input_settings=input_settings,
             pf_input=pf_input,
@@ -300,7 +284,7 @@ class HippoptWalkingPlanner(Planner):
         desired_com_position = (
             desired_left_foot_pose.translation() + desired_right_foot_pose.translation()
         ) / 2.0
-        desired_com_position[2] = 0.7  # TODO
+        desired_com_position[2] = self.robot_model.compute_com_init()[2]  # TODO
         return self.compute_state(
             input_settings=input_settings,
             pf_input=pf_input,
@@ -333,10 +317,10 @@ class HippoptWalkingPlanner(Planner):
 
         return output_list
 
-    def initialize_planner(self, time_step):
+    def initialize_planner(self, paramters:HippoptWalkingParameterTuning):
         logging.basicConfig(level=logging.INFO)
 
-        self.planner_settings = self.get_planner_settings(time_step=time_step)
+        self.planner_settings = self.get_planner_settings(paramters)
         self.planner = walking_planner.Planner(settings=self.planner_settings)
 
         self.pf_settings = self.get_pose_finder_settings(
@@ -346,7 +330,7 @@ class HippoptWalkingPlanner(Planner):
 
         horizon = self.planner_settings.horizon_length * self.planner_settings.time_step
 
-        step_length = 0.6
+        step_length = paramters.step_length
 
         contact_phases_guess = hp_rp.FeetContactPhasesDescriptor()
         contact_phases_guess.left = [
@@ -451,7 +435,6 @@ class HippoptWalkingPlanner(Planner):
         planner_guess.initial_state = initial_state
         planner_guess.final_state = final_state
         self.planner.set_initial_guess(planner_guess)
-
 
     def visualizer_init(self):
         self.visualizer_settings = self.get_visualizer_settings(

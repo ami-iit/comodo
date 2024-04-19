@@ -68,6 +68,12 @@ class RobotModel(KinDynComputations):
     def override_control_boar_list(self, remote_control_board_list: list):
         self.remote_control_board_list = remote_control_board_list
 
+    def set_foot_corner(self, corner_0, corner_1, corner_2, corner_3):
+        self.corner_0 = corner_0
+        self.corner_1 = corner_1
+        self.corner_2 = corner_2
+        self.corner_3 = corner_3
+
     def set_limbs_indexes(
         self,
         right_arm_indexes: list,
@@ -176,6 +182,15 @@ class RobotModel(KinDynComputations):
         w_H_init = np.linalg.inv(w_H_lefFoot_num) @ w_H_torso_num
         return w_H_init
 
+    def compute_com_init(self): 
+        com = self.CoM_position_fun()
+        return np.array(com(self.w_H_b_init,self.s_init))
+
+    def set_initial_position(self, s_init, w_H_b_init, xyz_rpy_init): 
+        self.s_init = s_init
+        self.w_H_b_init = w_H_b_init
+        self.xyz_rpy_init = xyz_rpy_init
+        
     def rotation_matrix_to_quaternion(self, R):
         # Ensure the matrix is a valid rotation matrix (orthogonal with determinant 1)
         trace = cs.trace(R)

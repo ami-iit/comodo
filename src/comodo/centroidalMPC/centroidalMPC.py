@@ -89,12 +89,12 @@ class CentroidalMPC(Planner):
         self.contact_0_handler = blf.parameters_handler.StdParametersHandler()
         self.contact_0_handler.set_parameter_int("number_of_corners", 4)
         self.contact_0_handler.set_parameter_string("contact_name", "left_foot")
-        self.contact_0_handler.set_parameter_vector_float("corner_0", [0.1, 0.05, 0.0])
-        self.contact_0_handler.set_parameter_vector_float("corner_1", [0.1, -0.05, 0.0])
+        self.contact_0_handler.set_parameter_vector_float("corner_0",self.robot_model.corner_0)
+        self.contact_0_handler.set_parameter_vector_float("corner_1", self.robot_model.corner_1)
         self.contact_0_handler.set_parameter_vector_float(
-            "corner_2", [-0.1, -0.05, 0.0]
+            "corner_2", self.robot_model.corner_2
         )
-        self.contact_0_handler.set_parameter_vector_float("corner_3", [-0.1, 0.05, 0.0])
+        self.contact_0_handler.set_parameter_vector_float("corner_3", self.robot_model.corner_3)
         self.contact_0_handler.set_parameter_vector_float(
             "bounding_box_lower_limit", [0.0, 0.0, 0.0]
         )
@@ -105,12 +105,12 @@ class CentroidalMPC(Planner):
         self.contact_1_handler = blf.parameters_handler.StdParametersHandler()
         self.contact_1_handler.set_parameter_int("number_of_corners", 4)
         self.contact_1_handler.set_parameter_string("contact_name", "right_foot")
-        self.contact_1_handler.set_parameter_vector_float("corner_0", [0.1, 0.05, 0.0])
-        self.contact_1_handler.set_parameter_vector_float("corner_1", [0.1, -0.05, 0.0])
+        self.contact_1_handler.set_parameter_vector_float("corner_0", self.robot_model.corner_0)
+        self.contact_1_handler.set_parameter_vector_float("corner_1", self.robot_model.corner_1)
         self.contact_1_handler.set_parameter_vector_float(
-            "corner_2", [-0.1, -0.05, 0.0]
+            "corner_2", self.robot_model.corner_2
         )
-        self.contact_1_handler.set_parameter_vector_float("corner_3", [-0.1, 0.05, 0.0])
+        self.contact_1_handler.set_parameter_vector_float("corner_3", self.robot_model.corner_3)
         self.contact_1_handler.set_parameter_vector_float(
             "bounding_box_lower_limit", [0.0, 0.0, 0.0]
         )
