@@ -125,13 +125,16 @@ class RobotModel(KinDynComputations):
         H_torso = self.w_H_torso(H_b, self.s)
         quat_torso = self.rotation_matrix_to_quaternion(H_torso[:3, :3])
         reference_rotation = np.asarray([1.0, 0.0, 0.0, 0.0])
-        self.solver.subject_to(self.s[17] == desired_knee)
-        self.solver.subject_to(self.s[11] == desired_knee)
-        self.solver.subject_to(self.s[3] == elbow)
-        self.solver.subject_to(self.s[7] == elbow)
-        self.solver.subject_to(self.s[1] == shoulder_roll)
-        self.solver.subject_to(self.s[5] == shoulder_roll)
-        self.solver.subject_to(self.s[9] == self.s[15])
+        for index, joint_name in enumerate(self.joint_name_list):
+            if "knee" in joint_name:
+                self.solver.subject_to(self.s[index] == desired_knee)
+            if "shoulder_roll" in joint_name: 
+                self.solver.subject_to(self.s[index] == shoulder_roll)
+            if "elbow" in joint_name: 
+                self.solver.subject_to(self.s[index] == elbow)    
+        
+        # self.solver.subject_to(self.s[9] == self.s[15])
+        # self.solver.subject_to(cs.norm_2(self.quat_pose_b[:4]) == 1.0)
         self.solver.subject_to(H_left_foot[2, 3] == 0.0)
         self.solver.subject_to(H_right_foot[2, 3] == 0.0)
         self.solver.subject_to(quat_left_foot == reference_rotation)
