@@ -343,9 +343,9 @@ class RobotModel(KinDynComputations):
         root.append(floating_joint)
 
         # Add box joint for payload lifting 
-        box_link,box_joint= self.add_box()
-        root.append(box_link)
-        root.append(box_joint)
+        # box_link,box_joint= self.add_box()
+        # root.append(box_link)
+        # root.append(box_joint)
         ## Adding the name to the collision and link visual
         for link in root.findall(".//link"):
             link_name = link.attrib.get("name")
@@ -396,6 +396,7 @@ class RobotModel(KinDynComputations):
         root = tree.getroot()
         # Find all body elements
         bodies = root.findall('.//body')
+        self.add_box(root)
         # Print the names of all bodies
         for body in bodies:
             name = body.get('name')
@@ -477,6 +478,7 @@ class RobotModel(KinDynComputations):
 
         mujoco_elem.append(asset_entry)
         ## TODO only for payload lifting 
+
         equality_const = self.add_equality_constraint_box()
         mujoco_elem.append(equality_const)
         ## Adding the floor
@@ -496,91 +498,44 @@ class RobotModel(KinDynComputations):
         new_xml = ET.tostring(tree.getroot(), encoding="unicode")
         return new_xml
 
-    def add_box(self): 
-        box_link = ET.Element('link')
-        box_link.set('name', 'box_link')
+    def add_box(self, mujoco_xml): 
+        # Find the body element with the name "l_elbow_1"
+        l_elbow_1_body = mujoco_xml.find('.//body[@name="l_elbow_1"]')
 
-        # Create inertial element
-        inertial = ET.Element('inertial')
-        origin_inertial = ET.Element('origin')
-        origin_inertial.set('xyz', '0 0 0')
-        origin_inertial.set('rpy', '0 0 0')
-        inertial.append(origin_inertial)
-        mass = ET.Element('mass')
-        mass.set('value', '5')
-        inertial.append(mass)
-        inertia = ET.Element('inertia')
-        inertia.set('ixx', '0.0418')
-        inertia.set('iyy', '0.0418')
-        inertia.set('izz', '0.0833')
-        inertia.set('ixy', '0.0')
-        inertia.set('ixz', '0')
-        inertia.set('iyz', '0')
-        inertial.append(inertia)
+        if l_elbow_1_body is not None:
+            # Create the new body element
+            new_body = ET.Element('body')
+            new_body.set('name', 'box_link_left')
+            new_body.set('pos', '-0.02 -0.20 -0.34')
 
-        box_link.append(inertial)
+            # Create the new inertial element
+            new_inertial = ET.Element('inertial')
+            new_inertial.set('pos', '0 0 0')
+            new_inertial.set('quat', '0.0 0.0 0.0 1.0')
+            new_inertial.set('mass', '5')
+            new_inertial.set('diaginertia', '0.0833 0.0418 0.0418')
+            new_body.append(new_inertial)
 
-        # Create visual element
-        visual = ET.Element('visual')
-        visual.set('name', 'box_visual')
-        origin_visual = ET.Element('origin')
-        origin_visual.set('xyz', '0 0 0')
-        origin_visual.set('rpy', '0 0 0')
-        visual.append(origin_visual)
-        geometry = ET.Element('geometry')
-        box = ET.Element('box')
-        box.set('size', '0.5 0.5 0.025')
-        geometry.append(box)
-        visual.append(geometry)
+            # Create the new geom element
+            new_geom = ET.Element('geom')
+            new_geom.set('name', 'base_link_collision')
+            new_geom.set('size', '0.15 0.20 0.0425')
+            new_geom.set('type', 'box')
+            new_body.append(new_geom)
 
-        box_link.append(visual)
-
-        # Create collision element
-        collision = ET.Element('collision')
-        collision.set('name', 'box_collision')
-
-        origin_collision = ET.Element('origin')
-        origin_collision.set('xyz', '0 0 0')
-        origin_collision.set('rpy', '0 0 0')
-        collision.append(origin_collision)
-
-        geometry = ET.Element('geometry')
-        box = ET.Element('box')
-        box.set('size', '0.5 0.5 0.025')
-        geometry.append(box)
-        collision.append(geometry)
-        box_link.append(collision)
-
-        box_joint = ET.Element("joint")
-        box_joint.set("name", "box_joint")
-        box_joint.set("type", "revolute")
-        # Create parent element
-        parent = ET.Element("parent")
-        parent.set("link", self.left_hand)
-        box_joint.append(parent)
-        # Create child element
-        child = ET.Element("child")
-        child.set("link", "box_link")
-        box_joint.append(child)
-
-        return box_link,box_joint
+            # Append the new body element inside the existing "l_elbow_1" body element
+            l_elbow_1_body.append(new_body)
     
     def add_equality_constraint_box(self): 
+        # Create the equality element
         equality = ET.Element('equality')
-        
-        # Create connect elements
-        # left_hand_connect = ET.Element('connect')
-        # left_hand_connect.set('body1', 'box_link')
-        # left_hand_connect.set('body2', self.left_hand)
-        # left_hand_connect.set('anchor', '-0.25 0.2 0.025')
-        # equality.append(left_hand_connect)
 
-        rigth_hand_connect = ET.Element('connect')
-        rigth_hand_connect.set('body1', 'box_link')
-        rigth_hand_connect.set('body2', 'r_upper_arm')
-        rigth_hand_connect.set('anchor', '-0.25 -0.2 0.025')
-        equality.append(rigth_hand_connect)
-        # mujoco_el.append(equality)
+        # Create the weld element
+        weld = ET.Element('weld')
+        weld.set('body1', 'r_elbow_1')
+        weld.set('body2', 'box_link_left')
+        weld.set('relpose', ' 0.02 0.2 -0.32 1 0 0 0 ')
+        equality.append(weld)
         return equality
 
     def get_base_pose_from_contacts(self, s, contact_frames_pose: dict):
