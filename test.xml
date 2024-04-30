@@ -1,15 +1,10 @@
 <mujoco model="stickBot">
   <compiler angle="radian"/>
-   <default> 
-  <default class="pos_control">
-      <joint damping="1" frictionloss="1"/>
-      <general biastype="affine" gainprm="1000" biasprm="0 -1000 -100" forcerange="-30 30"/>
-  </default>
-</default>
   <worldbody>
     <body name="root_link">
       <inertial pos="0.00131675 0.000355722 0.212213" quat="0.999969 -0.00197143 0.00661264 -0.00382259" mass="16.1368" diaginertia="2.62122 2.61922 2.13268"/>
-      <geom name="root_link_visual" pos="0 0 0.1785" size="0.0465 0.0475 0.071" quat="0.707107 0 0 -0.707107" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="0 1 0 1"/>
+      <joint name="floating_joint" type="free" limited="false" actuatorfrclimited="false"/>
+      <geom name="root_link_visual" size="0.0465 0.0475 0.071" quat="0.707107 0 0 -0.707107" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="0 1 0 1"/>
       <geom name="torso_1_visual" size="0.0405 0.062 0.07525" pos="0 0 0.075" quat="0.707107 0 0 -0.707107" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 0 1"/>
       <geom name="torso_2_visual" size="0.0678 0.04485 0.0669" pos="0 0 0.1394" quat="0.707107 0 0 -0.707107" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="1 0 0 1"/>
       <geom name="chest_visual" size="0.10205 0.1076 0.1046" pos="0 0 0.228358" quat="0.707107 0 0 -0.707107" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="0 0 1 1"/>
@@ -41,15 +36,6 @@
               <geom name="r_wrist_1_visual" size="0.011 0.02" pos="-0.0136999 -0.00400709 -0.1628" quat="0.0640871 0.782371 0.0678384 -0.615781" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="0.1 0.8 0.1 1"/>
               <geom name="r_hand_visual" size="0.062 0.0368 0.08105" pos="0.00999996 0.0029923 -0.24385" type="box" contype="0" conaffinity="0" group="1" density="0"/>
               <geom name="r_hand_collision" size="0.062 0.0368 0.08105" pos="0.00999996 0.0029923 -0.24385" type="box"/>
-              <body name="box_link_rigth" pos="0.0 0.2 -0.34">
-              <inertial pos="0 0 0" quat="1.0 0.0 0.0 0.0" mass="5" diaginertia="0.0833 0.0418 0.0418"/>
-              <!--<joint name="box_joint" pos="0.0 0.0 0.0" axis="1 0 0" range="-0.001 0" limited="true"/>-->
-              <geom name="base_link_collision_rigth" size="0.15 0.15 0.0125" type="box"/>
-              <!-- <geom name="side1_left_dummy_link_collision_rigth" size="0.005 0.005 0.005" pos="-0.15 0.2 0.025" type="box"/> -->
-              <!-- <geom name="side1_right_dummy_link_collision_rigth" size="0.005 0.005 0.005" pos="-0.15 -0.2 0.025" type="box"/> -->
-              <!-- <geom name="side2_left_dummy_link_collision_rigth" size="0.005 0.005 0.005" pos="0.15 0.2 0.025" type="box"/> -->
-              <!-- <geom name="side2_right_dummy_link_collision_rigth" size="0.005 0.005 0.005" pos="0.15 -0.2 0.025" type="box"/>   -->
-                </body>
             </body>
           </body>
         </body>
@@ -76,15 +62,6 @@
               <geom name="l_wrist_1_visual" size="0.011 0.02" pos="-0.0133999 0.00400654 -0.1628" quat="0.0640871 0.782371 0.0678384 -0.615781" type="cylinder" contype="0" conaffinity="0" group="1" density="0" rgba="0 1 1 1"/>
               <geom name="l_hand_visual" size="0.062 0.0368 0.08105" pos="0.0103 -0.00299285 -0.24385" type="box" contype="0" conaffinity="0" group="1" density="0" rgba="0 1 0 1"/>
               <geom name="l_hand_collision" size="0.062 0.0368 0.08105" pos="0.0103 -0.00299285 -0.24385" type="box" rgba="0 1 0 1"/>
-              <body name="box_link_left" pos="0.0 -0.2 -0.34">
-                <inertial pos="0 0 0" quat="0.0 0.0 0.0 1.0" mass="5" diaginertia="0.0833 0.0418 0.0418"/>
-                <!--<joint name="box_joint" pos="0.0 0.0 0.0" axis="1 0 0" range="-0.001 0" limited="true"/>-->
-                <geom name="base_link_collision" size="0.15 0.15 0.0125" type="box"/>
-                <!-- <geom name="side1_left_dummy_link_collision" size="0.005 0.005 0.005" pos="-0.15 0.2 0.025" type="box"/> -->
-                <!-- <geom name="side1_right_dummy_link_collision" size="0.005 0.005 0.005" pos="-0.15 -0.2 0.025" type="box"/> -->
-                <!-- <geom name="side2_left_dummy_link_collision" size="0.005 0.005 0.005" pos="0.15 0.2 0.025" type="box"/> -->
-                <!-- <geom name="side2_right_dummy_link_collision" size="0.005 0.005 0.005" pos="0.15 -0.2 0.025" type="box"/>              </body> -->
-            </body> 
             </body>
           </body>
         </body>
@@ -161,36 +138,4 @@
       </body>
     </body>
   </worldbody>
-  <actuator>
- <general class = "pos_control" name="r_hip_pitch" joint="r_hip_pitch"  ctrlrange="-0.785398 2.00713" />
- <general class = "pos_control" name="r_hip_roll" joint="r_hip_roll"  ctrlrange="-100 100" />
- <general class = "pos_control" name="r_hip_yaw" joint="r_hip_yaw"  ctrlrange="-100 100" />
- <general class = "pos_control" name="r_knee" joint="r_knee"  ctrlrange="-100 100" />
- <general class = "pos_control" name="r_ankle_pitch" joint="r_ankle_pitch"  ctrlrange="-100 100" />
- <general class = "pos_control" name="r_ankle_roll" joint="r_ankle_roll"  ctrlrange="-100 100" />
- <general class = "pos_control" name="l_hip_pitch" joint="l_hip_pitch"  ctrlrange="-100 100" />
- <general class = "pos_control" name="l_hip_roll" joint="l_hip_roll"  ctrlrange="-100 100" />
- <general class = "pos_control" name="l_hip_yaw" joint="l_hip_yaw"  ctrlrange="-100 100" />
- <general class = "pos_control" name="l_knee" joint="l_knee"  ctrlrange="-100 100" />
- <general class = "pos_control" name="l_ankle_pitch" joint="l_ankle_pitch"  ctrlrange="-100 100" />
- <general class = "pos_control" name="l_ankle_roll" joint="l_ankle_roll"  ctrlrange="-100 100" />
- <general class = "pos_control" name="r_shoulder_pitch" joint="r_shoulder_pitch"  ctrlrange="-100 100" />
- <general class = "pos_control" name="r_shoulder_roll" joint="r_shoulder_roll"  ctrlrange="-100 100" />
- <general class = "pos_control" name="r_shoulder_yaw" joint="r_shoulder_yaw"  ctrlrange="-100 100" />
- <general class = "pos_control" name="r_elbow" joint="r_elbow"  ctrlrange="-100 100" />
- <general class = "pos_control" name="l_shoulder_pitch" joint="l_shoulder_pitch"  ctrlrange="-100 100" />
- <general class = "pos_control" name="l_shoulder_roll" joint="l_shoulder_roll"  ctrlrange="-100 100" />
- <general class = "pos_control" name="l_shoulder_yaw" joint="l_shoulder_yaw"  ctrlrange="-100 100" />
- <general class = "pos_control" name="l_elbow" joint="l_elbow" ctrlrange="-100 100" />
- 
- </actuator> 
- 
-  <equality>
-  <!-- <connect body1="box_link" body2="r_elbow_1" anchor=" -0.2 -0.2 -0.48"/> -->
-  <!-- <connect body1="box_link" body2="l_elbow_1" anchor=" -0.2 0.2 -0.32"/> -->
-  <connect body1="box_link_left" body2="box_link_rigth" anchor=" 0.2 0.2 0.0"/>
-    <connect body1="box_link_left" body2="box_link_rigth" anchor=" -0.2 -0.2 0.0"/>
-  <!-- <connect body1="left-achilles-rod" body2="left-heel-spring" anchor="0.5012 0 0"/> -->
-</equality>
- <asset><texture type="skybox" builtin="gradient" rgb1=".3 .5 .7" rgb2="0 0 0" width="32" height="512" /><texture name="body" type="cube" builtin="flat" mark="cross" rgb1="0.8 0.6 0.4" rgb2="0.8 0.6 0.4" width="127" height="1278" markrgb="1 1 1" random="0.01" /><texture name="grid" type="2d" builtin="checker" rgb1=".1 .2 .3" rgb2=".2 .3 .4" width="512" height="512" /><material name="body" texture="body" texuniform="true" rgba="0.8 0.6 .4 1" /><material name="grid" texture="grid" texrepeat="1 1" texuniform="true" reflectance=".2" /></asset></mujoco>
 </mujoco>
