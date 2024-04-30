@@ -233,10 +233,7 @@ class InverseKinematics(Controller):
         Returns:
         - transformation_matrix (numpy array): 4x4 transformation matrix
         """
-
-        # Normalize quaternion to ensure it's a unit quaternion
-        # quaternion = quaternion / np.linalg.norm(quaternion)
-
+        
         # Create a 3x3 rotation matrix from the quaternion
         rotation_matrix = Rotation.from_quat(quaternion.coeffs()).as_matrix()
 
