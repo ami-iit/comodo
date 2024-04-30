@@ -52,7 +52,7 @@ class MujocoSimulator(Simulator):
 
     def set_base_pose_in_mujoco(self, xyz_rpy):
         base_xyz_quat = np.zeros(7)
-        base_xyz_quat[:3] = xyz_rpy[:3] + 0.0001
+        base_xyz_quat[:3] = xyz_rpy[:3]
         base_xyz_quat[3:] = self.RPY_to_quat(xyz_rpy[3], xyz_rpy[4], xyz_rpy[5])
         base_xyz_quat[2] = base_xyz_quat[2]
         self.data.qpos[:7] = base_xyz_quat
