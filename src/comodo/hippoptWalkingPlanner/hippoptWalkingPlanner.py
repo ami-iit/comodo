@@ -14,6 +14,12 @@ import hippopt.turnkey_planners.humanoid_kinodynamic.settings as walking_setting
 import hippopt.turnkey_planners.humanoid_kinodynamic.variables as walking_variables
 import hippopt.turnkey_planners.humanoid_pose_finder.planner as pose_finder
 from hippopt.robot_planning.variables.contacts import ContactPointDescriptor
+
+
+import manifpy as manif
+import bipedal_locomotion_framework as blf
+from datetime import timedelta
+
 class HippoptWalkingPlanner(Planner):
     def __init__(self, robot_model) -> None:
         self.urdf_path = robot_model.urdf_string
@@ -21,10 +27,75 @@ class HippoptWalkingPlanner(Planner):
 
     def plan_trajectory(self):
         output = self.planner.solve()
-
+        self.output = output
+        # print(type(output))
         self.humanoid_states = [s.to_humanoid_state() for s in output.values.system]
         self.left_contact_points = [s.contact_points.left for s in self.humanoid_states]
         self.right_contact_points = [s.contact_points.right for s in self.humanoid_states]
+        self.to_centroidal_mpc_references()
+
+    def to_centroidal_mpc_references(self): 
+        self.contact_status_reference_mpc()
+        self.define_momentum_trajectory_mpc()
+    
+    def define_momentum_trajectory_mpc(self):
+        com_fun = self.robot_model.CoM_position_fun()
+        com_knots = []
+        time_knots = []
+        angular_mom_knots = []
+        for i,item in enumerate(self.humanoid_states): 
+            
+            s = item.kinematics.joints.positions
+            xyz = item.kinematics.base.position
+            xyzw = item.kinematics.base.quaternion_xyzw 
+            wxyz_xyz = np.asarray([xyzw[3],xyzw[0],xyzw[1] ,xyzw[2], xyz[0], xyz[1], xyz[2]])
+            from_quat_to_matrix = self.robot_model.from_quaternion_to_matrix()
+            H_base = from_quat_to_matrix(wxyz_xyz)
+            com_i = np.array(com_fun(H_base,s))
+            com_knots.append(com_i)
+            time_knots.append(i*self.time_step)
+            mom_i = self.output.values.system[i].centroidal_momentum
+            angular_mom_knots.append(mom_i[3:])
+
+        com_spline = blf.math.QuinticSpline()
+        com_spline.set_initial_conditions(np.zeros(3), np.zeros(3))
+        com_spline.set_final_conditions(np.zeros(3), np.zeros(3))
+        com_spline.set_knots(com_knots, time_knots)
+
+        angular_mom_spline = blf.math.QuinticSpline()
+        angular_mom_spline.set_initial_conditions(np.zeros(3), np.zeros(3))
+        angular_mom_spline.set_final_conditions(np.zeros(3), np.zeros(3))
+        angular_mom_spline.set_knots(angular_mom_knots, time_knots)
+
+        com_traj = []
+        angular_mom_traj = []
+        velocity = np.zeros(3)
+        acceleration = np.zeros(3) 
+        ##Maybe this part is better to have it in the MPC rather than inside here 
+        frequency_ms = 100
+        dT_in_seconds = frequency_ms / 1000
+        tempInt = 40
+
+        for i in range(tempInt):
+            angular_mom_traj_i = np.zeros(3)
+            com_temp = np.zeros(3)
+            com_spline.evaluate_point(
+                i * dT_in_seconds, com_temp, velocity, acceleration
+            )
+            angular_mom_spline.evaluate_point(i*dT_in_seconds,angular_mom_traj_i, velocity, acceleration )
+            com_traj.append(com_temp)
+            angular_mom_traj.append(angular_mom_traj_i)
+        self.com_traj = com_traj
+        self.ang_mom_traj = angular_mom_traj
+
+    def contact_status_reference_mpc(self):
+        self.contact_phase_list_left = self.compute_contact_phase_list(self.left_contact_points, "leftContact", self.robot_model.H_left_foot)
+        self.contact_phase_list_right = self.compute_contact_phase_list(self.right_contact_points, "rigthContact", self.robot_model.H_right_foot)
+        contact_list_map = {}
+        contact_list_map.update({"left_foot": self.contact_phase_list_left})
+        contact_list_map.update({"right_foot": self.contact_phase_list_right})
+        self.contact_phase_list = blf.contacts.ContactPhaseList()
+        self.contact_phase_list.set_lists(contact_list_map)
 
     def from_robot_model_to_contact_descriptor(self, foot_frame): 
         return [
@@ -45,6 +116,7 @@ class HippoptWalkingPlanner(Planner):
                 input_position_in_foot_frame=self.robot_model.corner_3,
             ),
         ]
+    
     def get_planner_settings(self, paramters:HippoptWalkingParameterTuning) -> walking_settings.Settings:
         settings = walking_settings.Settings()
         settings.robot_urdf = str(self.urdf_path)
@@ -57,7 +129,8 @@ class HippoptWalkingPlanner(Planner):
         idyntree_model = idyntree_model_loader.model()
         settings.root_link = self.robot_model.base_link
         settings.horizon_length = paramters.horizon_length
-        settings.time_step = paramters.step_length
+        settings.time_step = paramters.time_step
+        self.time_step = paramters.time_step
         settings.contact_points = hp_rp.FeetContactPointDescriptors()
         settings.contact_points.left = self.from_robot_model_to_contact_descriptor(self.robot_model.left_foot_frame)
         settings.contact_points.right = self.from_robot_model_to_contact_descriptor(self.robot_model.right_foot_frame)
@@ -379,7 +452,7 @@ class HippoptWalkingPlanner(Planner):
             ),
         ]
 
-        initial_state = self.compute_initial_state(
+        self.initial_state = self.compute_initial_state(
             input_settings=self.planner_settings,
             pf_input=pf,
             contact_guess=contact_phases_guess,
@@ -400,7 +473,7 @@ class HippoptWalkingPlanner(Planner):
 
         first_half_guess_length = self.planner_settings.horizon_length // 2
         first_half_guess = hp_rp.humanoid_state_interpolator(
-            initial_state=initial_state,
+            initial_state=self.initial_state,
             final_state=middle_state,
             contact_phases=contact_phases_guess,
             contact_descriptor=self.planner_settings.contact_points,
@@ -432,7 +505,7 @@ class HippoptWalkingPlanner(Planner):
         planner_guess.system = [
             walking_variables.ExtendedHumanoid.from_humanoid_state(s) for s in self.guess
         ]
-        planner_guess.initial_state = initial_state
+        planner_guess.initial_state = self.initial_state
         planner_guess.final_state = final_state
         self.planner.set_initial_guess(planner_guess)
 
@@ -449,3 +522,48 @@ class HippoptWalkingPlanner(Planner):
             time_multiplier=1.0,
             save=False
         )
+
+    def compute_contact_phase_list(self,contact_points_status,contact_name, H_contact):
+        num_contact = 0 
+        previous_in_contact = False 
+        current_in_contact = True
+        contact_i =   blf.contacts.PlannedContact()
+        contact_list = blf.contacts.ContactList()
+        for i, point in enumerate(contact_points_status):
+            current_in_contact  = True
+            total_force_z = 0.0
+            for item in point:
+                total_force_z += item.f[2]   
+            if(total_force_z<200): 
+                current_in_contact = False    
+            if(not(previous_in_contact) and current_in_contact): 
+                # print("contact activated ad", i*contact_points_status)
+                human_state_i = self.humanoid_states[i]
+                s = human_state_i.kinematics.joints.positions
+                xyz = human_state_i.kinematics.base.position
+                xyzw = human_state_i.kinematics.base.quaternion_xyzw 
+                wxyz_xyz = np.asarray([xyzw[3],xyzw[0],xyzw[1] ,xyzw[2], xyz[0], xyz[1], xyz[2]])
+                from_quat_to_matrix = self.robot_model.from_quaternion_to_matrix()
+                H = from_quat_to_matrix(wxyz_xyz) 
+                H_contact_num = H_contact(H,s)
+                Position = np.zeros(3)
+                Position[0] = float(H_contact_num[0,3])
+                Position[1] = float(H_contact_num[1,3])
+                Position[2] = float(H_contact_num[2,3])
+                Position[2] = 0.0
+                name_contact = contact_name + str(num_contact)
+                num_contact+=1
+                contact_i.pose = manif.SE3(position = Position, quaternion= self.robot_model.rotation_matrix_to_quaternion(H_contact_num[:3,:3]))
+                contact_i.activation_time = timedelta(seconds=i*self.time_step)
+                contact_i.name = name_contact  
+            elif(previous_in_contact and not(current_in_contact)): 
+                contact_i.deactivation_time = timedelta(seconds=i*self.time_step)
+                contact_list.add_contact(contact_i)
+                contact_i =   blf.contacts.PlannedContact()
+            previous_in_contact = current_in_contact
+        
+        contact_i.deactivation_time=(timedelta(seconds=(i+5)*self.time_step))
+        contact_list.add_contact(contact_i)
+        return contact_list
+        
+        

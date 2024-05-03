@@ -272,10 +272,10 @@ class FootPositionPlanner:
         contact = rightPosition
         self.contact_list_right_foot.append(contact)
 
-    def plot_feet_position(self):
+    def plot_feet_position(self, left_foot, rigth_foot):
         fig = plt.figure()
         ax = fig.add_subplot(111)
-        for item in self.contact_list_left_foot:
+        for item in left_foot:
             pos = item.pose.translation()
             # pos = item
             plt.plot(pos[0], pos[1], marker="D", color="red")
@@ -285,7 +285,7 @@ class FootPositionPlanner:
                 )
             )
             ax.text(pos[0], pos[1], str(item.activation_time), style="italic")
-        for item in self.contact_list_right_foot:
+        for item in rigth_foot:
             pos = item.pose.translation()
             # pos = item
             plt.plot(pos[0], pos[1], marker="D", color="blue")
@@ -299,6 +299,10 @@ class FootPositionPlanner:
         plt.xlabel("x [m]", fontsize="40")
         plt.ylabel("y [m]", fontsize="40")
         plt.show()
+
+    def set_feet_contact_list(self, left_foot, rigth_foot): 
+        self.contact_list_right_foot = rigth_foot
+        self.contact_list_left_foot = left_foot
 
     def initialize_foot_swing_planner(self):
 

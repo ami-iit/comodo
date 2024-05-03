@@ -144,6 +144,10 @@ class CentroidalMPC(Planner):
         self.centroidal_mpc.set_contact_phase_list(self.contact_phase_list)
         self.contact_planner.initialize_foot_swing_planner()
 
+    def configure_with_feet_position(self, left_foot_contact_points, rigth_foot_contact_points): 
+        self.contact_planner.set_feet_contact_list(left_foot=left_foot_contact_points, rigth_foot=rigth_foot_contact_points)
+        self.contact_planner.initialize_foot_swing_planner()
+
     def define_test_com_traj(self, com0):
         com_knots = []
         time_knots = []
@@ -193,10 +197,12 @@ class CentroidalMPC(Planner):
             com_traj.append(com_temp)
             angular_mom_traj.append(angular_mom_traj_i)
 
+    def set_reference_mpc_ext(self, com_traj, angular_mom_traj, vector_phase_list):
         self.centroidal_mpc.set_reference_trajectory(com_traj, angular_mom_traj)
         self.centroidal_mpc.set_contact_phase_list(vector_phase_list)
         self.com_traj = com_traj
         self.angular_mom_trak = angular_mom_traj
+        self.contact_phase_list = vector_phase_list
 
     def update_contact_phase_list(self, next_planned_contacts):
         new_contact_list = self.contact_phase_list.lists()
@@ -260,6 +266,7 @@ class CentroidalMPC(Planner):
         self.kindyn.getCentroidalTotalMomentumJacobian(Jcm)
         nu = np.concatenate((self.w_b, self.s_dot))
         H = Jcm.toNumPy() @ nu
+        
         self.centroidal_dynamics.set_state((com.toNumPy(), dcom.toNumPy(), H[3:]))
         self.centroidal_integrator.set_integration_step(self.dT)
 

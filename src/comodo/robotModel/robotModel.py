@@ -97,6 +97,33 @@ class RobotModel(KinDynComputations):
         kindyn.loadRobotModel(model_loader.model())
         return kindyn
 
+    def rotation_matrix_to_quaternion(rotation_matrix):
+        """
+        Convert a 3x3 rotation matrix to a quaternion [x, y, z, w].
+        
+        Args:
+        rotation_matrix (np.array): 3x3 rotation matrix.
+        
+        Returns:
+        list: Quaternion in the form [x, y, z, w].
+        """
+        # Ensure the matrix is a valid rotation matrix (orthogonal with determinant 1)
+        if not np.allclose(np.dot(rotation_matrix.T, rotation_matrix), np.eye(3)) or not np.isclose(np.linalg.det(rotation_matrix), 1):
+            raise ValueError("Invalid rotation matrix.")
+        
+        # Extracting rotation elements
+        r11, r12, r13 = rotation_matrix[0]
+        r21, r22, r23 = rotation_matrix[1]
+        r31, r32, r33 = rotation_matrix[2]
+        
+        # Calculating quaternion elements
+        qw = np.sqrt(1 + r11 + r22 + r33) / 2
+        qx = (r32 - r23) / (4 * qw)
+        qy = (r13 - r31) / (4 * qw)
+        qz = (r21 - r12) / (4 * qw)
+        
+        return [qx, qy, qz, qw]
+    
     def compute_desired_position_walking(self):
         # desired_knee = -1.22
         desired_knee = -1.0
@@ -445,6 +472,7 @@ class RobotModel(KinDynComputations):
     def from_quaternion_to_matrix(self):
         f_opts = (dict(jit=False, jit_options=dict(flags="-Ofast")),)
         # Quaternion variable
+        # Quaternion order wxyz 
         H = cs.SX.eye(4)
         q = cs.SX.sym("q", 7)
         R = (
