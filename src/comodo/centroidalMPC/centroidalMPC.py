@@ -83,6 +83,7 @@ class CentroidalMPC(Planner):
         self.mpc_param_handler.set_parameter_int("number_of_slices", 1)
         self.mpc_param_handler.set_parameter_float("static_friction_coefficient", 0.33)
         self.mpc_param_handler.set_parameter_string("linear_solver", "mumps")
+        self.mpc_param_handler.set_parameter_string("solver_name", "ipopt")
 
         ## MPC Contact Hanlder
 
