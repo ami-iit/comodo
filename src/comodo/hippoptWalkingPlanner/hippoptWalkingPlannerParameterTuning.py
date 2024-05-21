@@ -3,7 +3,7 @@ import numpy as np
 class HippoptWalkingParameterTuning:
     
     def __init__(self) -> None:
-        self.step_length = 0.6
+        self.step_length = 0.3
         self.time_step = 0.1
         self.horizon_length = 30
     

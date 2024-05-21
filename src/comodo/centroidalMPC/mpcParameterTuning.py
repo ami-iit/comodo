@@ -3,11 +3,11 @@ import numpy as np
 
 class MPCParameterTuning:
     def __init__(self) -> None:
-        self.com_weight = np.asarray([2, 2, 80])
-        self.contact_position_weight = 125
-        self.force_rate_change_weight = np.asarray([130.0, 20.0, 10.0])
-        self.angular_momentum_weight = 125
-        self.contact_force_symmetry_weight = 35.0
+        self.com_weight = np.asarray([100, 100, 1000])
+        self.contact_position_weight = 1e3
+        self.force_rate_change_weight = np.asarray([10.0, 10.0, 10.0])
+        self.angular_momentum_weight = 1e5
+        self.contact_force_symmetry_weight = 10.0
 
     def set_parameters(
         self,

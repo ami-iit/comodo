@@ -21,6 +21,7 @@ import bipedal_locomotion_framework as blf
 from datetime import timedelta
 
 class HippoptWalkingPlanner(Planner):
+   
     def __init__(self, robot_model) -> None:
         self.urdf_path = robot_model.urdf_string
         super().__init__(robot_model)
@@ -33,6 +34,10 @@ class HippoptWalkingPlanner(Planner):
         self.left_contact_points = [s.contact_points.left for s in self.humanoid_states]
         self.right_contact_points = [s.contact_points.right for s in self.humanoid_states]
         self.to_centroidal_mpc_references()
+        return output.values
+
+    def warm_start_opt(self, warm_start): 
+        self.planner.set_initial_guess(warm_start)
 
     def to_centroidal_mpc_references(self): 
         self.contact_status_reference_mpc()
@@ -53,7 +58,7 @@ class HippoptWalkingPlanner(Planner):
             H_base = from_quat_to_matrix(wxyz_xyz)
             com_i = np.array(com_fun(H_base,s))
             com_knots.append(com_i)
-            time_knots.append(i*self.time_step)
+            time_knots.append(i*self.time_step)          
             mom_i = self.output.values.system[i].centroidal_momentum
             angular_mom_knots.append(mom_i[3:])
 
@@ -74,15 +79,15 @@ class HippoptWalkingPlanner(Planner):
         ##Maybe this part is better to have it in the MPC rather than inside here 
         frequency_ms = 100
         dT_in_seconds = frequency_ms / 1000
-        tempInt = 40
-
+        time_traj = len(time_knots)*self.time_step
+        tempInt = int(time_traj/dT_in_seconds) +50
         for i in range(tempInt):
             angular_mom_traj_i = np.zeros(3)
             com_temp = np.zeros(3)
             com_spline.evaluate_point(
                 i * dT_in_seconds, com_temp, velocity, acceleration
             )
-            angular_mom_spline.evaluate_point(i*dT_in_seconds,angular_mom_traj_i, velocity, acceleration )
+            # angular_mom_spline.evaluate_point(i*dT_in_seconds,angular_mom_traj_i, velocity, acceleration )
             com_traj.append(com_temp)
             angular_mom_traj.append(angular_mom_traj_i)
         self.com_traj = com_traj
@@ -173,7 +178,7 @@ class HippoptWalkingPlanner(Planner):
         settings.contact_velocity_control_cost_multiplier = 5.0
         settings.contact_force_control_cost_multiplier = 0.0001
         settings.final_state_expression_type = hippopt.ExpressionType.subject_to
-        settings.periodicity_expression_type = hippopt.ExpressionType.subject_to
+        settings.periodicity_expression_type = hippopt.ExpressionType.skip # implies initial velocity 
         settings.casadi_function_options = {"cse": True}
         settings.casadi_opti_options = {"expand": True, "detect_simple_bounds": True}
         settings.casadi_solver_options = {
@@ -499,7 +504,7 @@ class HippoptWalkingPlanner(Planner):
             input_settings=self.planner_settings,
             desired_states=self.guess,
         )
-
+        ## Warm start optimization 
         self.planner.set_references(self.references)
         planner_guess = self.planner.get_initial_guess()
         planner_guess.system = [
@@ -529,15 +534,15 @@ class HippoptWalkingPlanner(Planner):
         current_in_contact = True
         contact_i =   blf.contacts.PlannedContact()
         contact_list = blf.contacts.ContactList()
+        quaternion = [0.0, 0.0, 0.0, 1.0]
         for i, point in enumerate(contact_points_status):
             current_in_contact  = True
             total_force_z = 0.0
             for item in point:
                 total_force_z += item.f[2]   
-            if(total_force_z<200): 
+            if(total_force_z<50): 
                 current_in_contact = False    
             if(not(previous_in_contact) and current_in_contact): 
-                # print("contact activated ad", i*contact_points_status)
                 human_state_i = self.humanoid_states[i]
                 s = human_state_i.kinematics.joints.positions
                 xyz = human_state_i.kinematics.base.position
@@ -553,16 +558,16 @@ class HippoptWalkingPlanner(Planner):
                 Position[2] = 0.0
                 name_contact = contact_name + str(num_contact)
                 num_contact+=1
-                contact_i.pose = manif.SE3(position = Position, quaternion= self.robot_model.rotation_matrix_to_quaternion(H_contact_num[:3,:3]))
+                contact_i.pose = manif.SE3(position = Position, quaternion= quaternion)
                 contact_i.activation_time = timedelta(seconds=i*self.time_step)
                 contact_i.name = name_contact  
-            elif(previous_in_contact and not(current_in_contact)): 
+            elif(previous_in_contact and not(current_in_contact)):
                 contact_i.deactivation_time = timedelta(seconds=i*self.time_step)
                 contact_list.add_contact(contact_i)
                 contact_i =   blf.contacts.PlannedContact()
             previous_in_contact = current_in_contact
         
-        contact_i.deactivation_time=(timedelta(seconds=(i+5)*self.time_step))
+        contact_i.deactivation_time=(timedelta(seconds=(i+100)*self.time_step))
         contact_list.add_contact(contact_i)
         return contact_list
         
