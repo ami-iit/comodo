@@ -68,9 +68,8 @@ class DrakeURDFHelper:
 
         logging.info("Converted all the meshes from .stl to .obj")
 
-    def remove_all_collisions(self):
+    def remove_all_collisions(self, list=[]):
         """Removes all the collision tags from the URDF"""
-        list = []
         for link in self.root.findall("./link"):
             if link.attrib["name"] not in list:
                 for col in link.findall("./collision"):
@@ -143,8 +142,9 @@ class DrakeURDFHelper:
             static_friction=1.0, dynamic_friction=1.0
         )
         proximity_properties_ground = ProximityProperties()
+        # https://drake.mit.edu/pydrake/pydrake.geometry.html?highlight=addcontactmaterial#pydrake.geometry.AddContactMaterial
         AddContactMaterial(
-            1e4, 1e7, surface_friction_ground, proximity_properties_ground
+            dissipation=1e4, point_stiffness=1e7, friction=surface_friction_ground, properties=proximity_properties_ground, 
         )
         AddRigidHydroelasticProperties(0.01, proximity_properties_ground)
 
@@ -160,7 +160,7 @@ class DrakeURDFHelper:
             RigidTransform(),
             HalfSpace(),
             "ground_visual",
-            np.array([0.5, 0.5, 0.5, 0.0]),
+            np.array([0.5, 0.5, 0.5, 0.0]), # modify to set the RGBA color of the ground plane
         )
 
     def add_soft_feet_collisions(self, plant, xMinMax, yMinMax, foot_frames):
@@ -168,8 +168,11 @@ class DrakeURDFHelper:
             static_friction=1.0, dynamic_friction=1.0
         )
         proximity_properties_feet = ProximityProperties()
-        AddContactMaterial(1e4, 1e7, surface_friction_feet, proximity_properties_feet)
-        AddCompliantHydroelasticProperties(0.01, 1e8, proximity_properties_feet)
+        AddContactMaterial(
+            dissipation=1e4, point_stiffness=1e7, friction=surface_friction_feet, properties=proximity_properties_feet, 
+        )
+        # https://drake.mit.edu/pydrake/pydrake.geometry.html?highlight=addcontactmaterial#pydrake.geometry.AddCompliantHydroelasticProperties
+        AddCompliantHydroelasticProperties(resolution_hint=0.01, hydroelastic_modulus=1e8, properties=proximity_properties_feet)
 
         for ii in foot_frames:
             # for collision
@@ -187,5 +190,5 @@ class DrakeURDFHelper:
                 RigidTransform(np.array([0, 0, 0])),
                 BoxDrake((xMinMax[1] - xMinMax[0]) / 2, yMinMax[1] - yMinMax[0], 2e-3),
                 ii + "_collision",
-                np.array([1.0, 1.0, 1.0, 1]),
+                np.array([1.0, 1.0, 1.0, 1]), # modify to set the RGBA color of the feet collisions
             )
