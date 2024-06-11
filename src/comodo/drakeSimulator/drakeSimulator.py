@@ -33,14 +33,14 @@ class DrakeSimulator(SimulatorAbstract):
         self.active_meshcat = False
         super().__init__()
 
-    def load_model(self, robot_model, s, xyz_rpy, kv_motors=None, Im=None):
+    def load_model(self, robot_model, s, xyz_rpy, kv_motors=None, Im=None, keep_collision_meshes=[]):
         # load the robot model construct the diagram and store the simulator
         self.robot_model = robot_model
         self.urdf_string = robot_model.urdf_string
 
         # convert the urdf string to be drake compatible
         self.duh.load_urdf(urdf_string=self.urdf_string)
-        self.duh.remove_all_collisions()
+        self.duh.remove_all_collisions(keep_collision_meshes)
         self.duh.fix_not_in_joint_list(self.robot_model.joint_name_list)
         self.duh.convert_xml_to_odio()
         self.duh.add_acutation_tags()
@@ -65,12 +65,6 @@ class DrakeSimulator(SimulatorAbstract):
 
         # add the ground and the feet
         self.duh.add_ground_with_friction(plant)
-
-        # configure feet collisions
-        xMinMax = [-0.225, 0.225]
-        yMinMax = [-0.05, 0.05]
-        foot_frames = [robot_model.left_foot_frame, robot_model.right_foot_frame]
-        self.duh.add_soft_feet_collisions(plant, xMinMax=xMinMax, yMinMax=yMinMax, foot_frames = foot_frames)
 
         plant.Finalize()
         builder.ExportInput(plant.get_actuation_input_port(), "control_input")
@@ -143,8 +137,6 @@ class DrakeSimulator(SimulatorAbstract):
             self.meshcat = StartMeshcat()
             self.active_meshcat = True
         pass
-
-    # does this need to simulator specific?
     def set_base_pose_in_drake(self, xyz_rpy):
         base_xyz_quat = np.zeros(7)
         # order -- quaternion+xyz
