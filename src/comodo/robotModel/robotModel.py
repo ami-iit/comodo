@@ -93,7 +93,7 @@ class RobotModel(KinDynComputations):
         self.right_foot_front_ct = right_foot_front_link_name + self.collision_keyword
         self.left_foot_rear_ct = left_foot_rear_link_name + self.collision_keyword
         self.left_foot_front_ct = left_foot_front_link_name + self.collision_keyword
-
+        self.is_with_box = False
         self.remote_control_board_list = [
             "/" + self.robot_name + "/torso",
             "/" + self.robot_name + "/left_arm",
@@ -118,6 +118,9 @@ class RobotModel(KinDynComputations):
     def override_control_boar_list(self, remote_control_board_list: list):
         self.remote_control_board_list = remote_control_board_list
 
+    def set_with_box(self,is_with_box): 
+        self.is_with_box  = is_with_box
+    
     def get_initial_configuration(self):
         # TODO change to be generica 
         base_position_init = np.array([-0.0489, 0, 0.65])
@@ -396,11 +399,7 @@ class RobotModel(KinDynComputations):
         root = tree.getroot()
         # Find all body elements
         bodies = root.findall('.//body')
-        self.add_box(root)
-        # Print the names of all bodies
-        for body in bodies:
-            name = body.get('name')
-            print("Body:", name)
+        if self.is_with_box: self.add_box(root)
         mujoco_elem = None
         for elem in root.iter():
             if elem.tag == "mujoco":
@@ -479,8 +478,9 @@ class RobotModel(KinDynComputations):
         mujoco_elem.append(asset_entry)
         ## TODO only for payload lifting 
 
-        equality_const = self.add_equality_constraint_box()
-        mujoco_elem.append(equality_const)
+        if self.is_with_box:
+            equality_const = self.add_equality_constraint_box()
+            mujoco_elem.append(equality_const)
         ## Adding the floor
         #   <geom name="floor" size="0 0 .05" type="plane" material="grid" condim="3"/>
         world_elem = None
@@ -506,7 +506,7 @@ class RobotModel(KinDynComputations):
             # Create the new body element
             new_body = ET.Element('body')
             new_body.set('name', 'box_link_left')
-            new_body.set('pos', '-0.02 -0.20 -0.34')
+            new_body.set('pos', '-0.01 -0.20 -0.34')
 
             # Create the new inertial element
             new_inertial = ET.Element('inertial')
