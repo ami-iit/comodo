@@ -10,11 +10,12 @@ from comodo.centroidalMPC.mpcParameterTuning import MPCParameterTuning
 
 class CentroidalMPC(Planner):
     def __init__(self, robot_model, step_length, frequency_ms=100):
-
         self.dT = timedelta(milliseconds=frequency_ms)
         self.dT_in_seconds = frequency_ms / 1000
         self.contact_planner = FootPositionPlanner(
-            robot_model=robot_model, dT=self.dT_in_seconds, step_length=step_length
+            robot_model=robot_model,
+            dT=timedelta(seconds=self.dT_in_seconds),
+            step_length=step_length,
         )
         self.centroidal_mpc = blf.reduced_model_controllers.CentroidalMPC()
         scaling = 1.0
@@ -33,7 +34,6 @@ class CentroidalMPC(Planner):
         return self.dT_in_seconds
 
     def plan_trajectory(self):
-
         com = self.kindyn.getCenterOfMassPosition()
         dcom = self.kindyn.getCenterOfMassVelocity()
         Jcm = iDynTree.MatrixDynSize(6, 6 + self.robot_model.NDoF)
@@ -74,7 +74,10 @@ class CentroidalMPC(Planner):
         self.mpc_param_handler = blf.parameters_handler.StdParametersHandler()
         self.mpc_param_handler.set_parameter_datetime("sampling_time", self.dT)
         self.mpc_param_handler.set_parameter_datetime("time_horizon", time_horizon)
-        self.mpc_param_handler.set_parameter_float("contact_force_symmetry_weight", 1.0)
+        self.mpc_param_handler.set_parameter_float(
+            "contact_force_symmetry_weight",
+            mpc_parameters.contact_force_symmetry_weight,
+        )
         self.mpc_param_handler.set_parameter_int("verbosity", 0)
         self.mpc_param_handler.set_parameter_int("number_of_maximum_contacts", 2)
         self.mpc_param_handler.set_parameter_int("number_of_slices", 1)
@@ -271,4 +274,5 @@ class CentroidalMPC(Planner):
             forces_right = forces_right + item.force
         com = self.centroidal_integrator.get_solution()[0]
         dcom = self.centroidal_integrator.get_solution()[1]
-        return com, dcom, forces_left, forces_right
+        ang_mom = self.centroidal_integrator.get_solution()[2]
+        return com, dcom, forces_left, forces_right, ang_mom
