@@ -210,16 +210,30 @@ class RobotModel(KinDynComputations):
         return kindyn
 
     def compute_desired_position_walking(self):
-        # desired_knee = -1.22
+        
         desired_knee = -1.0
         shoulder_roll = 0.251
         elbow = 0.616
+        # Initialize empty lists for indexes
+        knee_indexes = []
+        shoulder_roll_indexes = []
+        elbow_indexes = []
+        hip_roll = []
+        # Populate the lists with indexes if the keywords are found
+        for i, joint in enumerate(self.joint_name_list):
+            if "knee" in joint:
+                knee_indexes.append(i)
+            if "shoulder_roll" in joint:
+                shoulder_roll_indexes.append(i)
+            if "elbow" in joint:
+                elbow_indexes.append(i)
+            if "hip_roll" in joint: 
+                hip_roll.append(i)
 
         p_opts = {}
         s_opts = {"linear_solver": "mumps"}
         self.solver = cs.Opti()
         self.solver.solver("ipopt", p_opts, s_opts)
-
         self.w_H_torso = self.forward_kinematics_fun(self.torso_link)
         self.s = self.solver.variable(self.NDoF)  # joint positions
         self.quat_pose_b = self.solver.variable(7)
@@ -237,13 +251,17 @@ class RobotModel(KinDynComputations):
         H_torso = self.w_H_torso(H_b, self.s)
         quat_torso = self.rotation_matrix_to_quaternion(H_torso[:3, :3])
         reference_rotation = np.asarray([1.0, 0.0, 0.0, 0.0])
-        self.solver.subject_to(self.s[17] == desired_knee)
-        self.solver.subject_to(self.s[11] == desired_knee)
-        self.solver.subject_to(self.s[3] == elbow)
-        self.solver.subject_to(self.s[7] == elbow)
-        self.solver.subject_to(self.s[1] == shoulder_roll)
-        self.solver.subject_to(self.s[5] == shoulder_roll)
-        self.solver.subject_to(self.s[9] == self.s[15])
+        if(knee_indexes):
+            self.solver.subject_to(self.s[knee_indexes[0]] == desired_knee)
+            self.solver.subject_to(self.s[knee_indexes[1]] == desired_knee)
+        if(elbow_indexes):
+            self.solver.subject_to(self.s[elbow_indexes[0]] == elbow)
+            self.solver.subject_to(self.s[elbow_indexes[1]] == elbow)
+        if(shoulder_roll_indexes):
+            self.solver.subject_to(self.s[shoulder_roll_indexes[0]] == shoulder_roll)
+            self.solver.subject_to(self.s[shoulder_roll_indexes[1]] == shoulder_roll)
+        if(hip_roll):
+            self.solver.subject_to(self.s[hip_roll[0]] == self.s[hip_roll[1]])
         self.solver.subject_to(H_left_foot[2, 3] == 0.0)
         self.solver.subject_to(H_right_foot[2, 3] == 0.0)
         self.solver.subject_to(quat_left_foot == reference_rotation)
@@ -253,12 +271,16 @@ class RobotModel(KinDynComputations):
         cost_function += cs.sumsqr(H_left_foot[:2, 3] - left_foot_pos[:2])
         cost_function += cs.sumsqr(H_right_foot[:2, 3] - right_foot_pos[:2])
         self.solver.minimize(cost_function)
+        try:
+            self,sol = self.solver.solve()
+        except:
+            return False, None, None, None 
         self.sol = self.solver.solve()
         s_return = np.array(self.sol.value(self.s))
         quat_base_opt = np.array(self.sol.value(self.quat_pose_b))
         H_b_return = quat_to_transf(quat_base_opt)
         xyz_rpy = self.matrix_to_rpy(H_b_return)
-        return s_return, xyz_rpy, H_b_return
+        return True, s_return, xyz_rpy, H_b_return
 
     def get_left_arm_from_joint_position(self, s):
         if self.left_arm_indexes is None:
