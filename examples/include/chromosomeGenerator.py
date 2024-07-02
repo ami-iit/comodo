@@ -57,6 +57,7 @@ class ChromosomeGenerator():
                         ind[idx_start_point+idx] = random.choice(item.feasible_set)
             idx_start_point+=item.dimension
         return ind
+        
     def get_chromosome_dict(self,ind): 
         idx_start_point = 0 
         return_dict = {}

@@ -28,28 +28,30 @@ joint_name_list = [
     "l_ankle_pitch",
     "l_ankle_roll",
 ]
-LIMIT_HARDWARE_LOW = 0.5
-LIMIT_HARDWARE_HIGH = 2.0
-# Limits for each gene in the chromosome
-LIMITS = [(LIMIT_HARDWARE_LOW,LIMIT_HARDWARE_HIGH), (LIMIT_HARDWARE_LOW, LIMIT_HARDWARE_HIGH)]
-NUM_GENES = len(LIMITS)
+
 POPULATION_SIZE = 10
 GENERATIONS = 50
+
 chrom_generator = ChromosomeGenerator()
+link_names = ["root_link","chest","upper_arm", "forearm","lower_leg","hip_3"]
+
+## length multiplier 
 length_multiplier = SubChromosome()
 length_multiplier.type = NameChromosome.LENGTH
 length_multiplier.isFloat = True
 length_multiplier.limits = [0.5,2.0]
-length_multiplier.dimension = 4
+length_multiplier.dimension = len(link_names)
 chrom_generator.add_parameters(length_multiplier)
-motors_inertia = SubChromosome()
-motors_inertia.type = NameChromosome.MOTOR_INERTIA
-motors_inertia.dimension = len(joint_name_list)
-motors_inertia.isFloat = True 
-motors_inertia.limits=[1e-5, 1e-1]
-chrom_generator.add_parameters(motors_inertia)
 
-#TODO also the planning shoule be parametrized w.r.t. th ejoint name list 
+## density 
+density_param = SubChromosome()
+density_param.type = NameChromosome.DENSITY
+density_param.isDiscrete = True 
+density_param.feasible_set= [ 2129.2952964, 1199.07622408, 893.10763518, 626.60271872, 1661.68632652, 727.43130782, 600.50011475, 2222.0327914,]
+density_param.dimension = len(link_names)
+chrom_generator.add_parameters(density_param)
+## joint type 
+#TODO also the planning should be parametrized w.r.t. the joint name list 
 jointTypeCh = SubChromosome()
 jointTypeCh.type = NameChromosome.JOINT_TYPE
 jointTypeCh.dimension = 10
@@ -57,14 +59,28 @@ jointTypeCh.isDiscrete = True
 jointTypeCh.feasible_set = [0,1]
 chrom_generator.add_parameters(jointTypeCh)
 
+## motors inerita 
+motors_inertia = SubChromosome()
+motors_inertia.type = NameChromosome.MOTOR_INERTIA
+motors_inertia.dimension = 10 # TODO find a way to automatically ensure symetry  
+motors_inertia.isFloat = True 
+motors_inertia.limits=[1e-5, 1e-1]
+chrom_generator.add_parameters(motors_inertia)
+
+## motors friction 
+motors_friction = SubChromosome()
+motors_friction.type = NameChromosome.MOTOR_FRICTION
+motors_friction.dimension = 10 # TODO find a way to automatically ensure symetry  
+motors_friction.isFloat = True 
+motors_friction.limits=[0.001, 0.1]
+chrom_generator.add_parameters(motors_friction)
+
+
 # Define a fitness class with weights (-1.0, -1.0) for minimization problems
 creator.create("FitnessMulti", base.Fitness, weights=(-1.0, -1.0))
 
 # Define an individual as a list of floats
 creator.create("Individual", list, fitness=creator.FitnessMulti)
-
-def create_individual():
-    return [random.uniform(lim[0], lim[1]) for lim in LIMITS]
 
 # Register the individual and population creation functions in the toolbox
 toolbox = base.Toolbox()
@@ -104,7 +120,6 @@ create_urdf_instance = createUrdf(
     original_urdf_path=urdf_robot_file.name, save_gazebo_plugin=False
 )
 # Define parametric links and controlled joints
-link_names = ["upper_arm", "forearm","lower_leg","hip_3"]
 joint_name_list = [
     "r_shoulder_pitch", #0 
     "r_shoulder_roll",#1 
@@ -131,9 +146,10 @@ torso_link = ['root_link', 'torso_1', 'torso_2', 'chest']
 
 ## This will be to be better organize
 
-def compute_fitness_payload_lifting(modifications,motors_param,joint_name_list_updated): 
+def compute_fitness_payload_lifting(modifications_length, modifications_densities,motors_param,joint_name_list_updated): 
     # Modify the robot model and initialize
-    create_urdf_instance.modify_lengths(modifications)
+    create_urdf_instance.modify_lengths(modifications_length)
+    create_urdf_instance.modify_densities(modifications_densities)
     urdf_robot_string = create_urdf_instance.write_urdf_to_file()
     create_urdf_instance.reset_modifications()
     robot_model_init = RobotModel(urdf_robot_string, "stickBot", joint_name_list_updated)
@@ -186,11 +202,12 @@ def compute_fitness_payload_lifting(modifications,motors_param,joint_name_list_u
     mujoco_instance.close_visualization()
     return TIME_TH -t
 
-def compute_fitness_walking(modifications, motors_param,joint_name_list_updated):
+def compute_fitness_walking(modifications_length, modifications_densities, motors_param,joint_name_list_updated):
     # Modify the robot model and initialize
      # Set loop variables
     TIME_TH = 20
-    create_urdf_instance.modify_lengths(modifications)
+    create_urdf_instance.modify_lengths(modifications_length)
+    create_urdf_instance.modify_densities(modifications_densities)
     urdf_robot_string = create_urdf_instance.write_urdf_to_file()
     create_urdf_instance.reset_modifications()
     robot_model_init = RobotModel(urdf_robot_string, "stickBot", joint_name_list_updated)
@@ -314,47 +331,58 @@ def evaluate(individual):
     # Define the robot modifications
     dict_return = chrom_generator.get_chromosome_dict(individual)
     links_length = dict_return[NameChromosome.LENGTH]
+    density = dict_return[NameChromosome.DENSITY]
     joint_active_temp = dict_return[NameChromosome.JOINT_TYPE]
-    motor_inertia_param = dict_return[NameChromosome.MOTOR_INERTIA]
-
+    motor_inertia_param_temp = dict_return[NameChromosome.MOTOR_INERTIA]
+    motor_friction_temp = dict_return[NameChromosome.MOTOR_FRICTION]
     joint_name_list_updated =[]
     Im = []
+    Kv = []
     joint_active = []
     joint_active.extend(joint_active_temp[:4])
     joint_active.extend(joint_active_temp[:4])
     joint_active.extend(joint_active_temp[4:])
     joint_active.extend(joint_active_temp[4:])
-    # print("size!!", len(joint_active))
-    # print(len(joint_active_temp))
+    motor_inertia_param = []
+    motor_inertia_param.extend(motor_inertia_param_temp[:4])
+    motor_inertia_param.extend(motor_inertia_param_temp[:4])
+    motor_inertia_param.extend(motor_inertia_param_temp[4:])
+    motor_inertia_param.extend(motor_inertia_param_temp[4:])
+    motor_friction_param = []
+    motor_friction_param.extend(motor_friction_temp[:4])
+    motor_friction_param.extend(motor_friction_temp[:4])
+    motor_friction_param.extend(motor_friction_temp[4:])
+    motor_friction_param.extend(motor_friction_temp[4:])
+    
+    # This is needed because not all joints will be active, and only the active one will have motor characteristics 
     for idx_joint in range(len(joint_active)):
         if(joint_active[idx_joint]== 1):
             joint_name_list_updated.append(joint_name_list[idx_joint])
             Im.append(motor_inertia_param[idx_joint])
+            Kv.append(motor_friction_param[idx_joint])
 
 
     modifications = {}
+    modifications_density = {}
     for idx,item in enumerate(link_names):
         if(item in torso_link):
             modifications.update({item: links_length[idx]})
+            modifications_density.update({item:density[idx]})
         else:    
             left_leg_item = "l_" + item
             right_leg_item = "r_" + item
             
             modifications.update({left_leg_item: links_length[idx]})
             modifications.update({right_leg_item: links_length[idx]})
-    # Motors Parameters
-    Im_arms = 1e-3 * np.ones(4)  # from 0-4
-    Im_legs = 1e-3 * np.ones(6)  # from 5-10
-    kv_arms = 0.001 * np.ones(4)  # from 11-14
-    kv_legs = 0.001 * np.ones(6)  # from 20
+            modifications_density.update({left_leg_item: density[idx]})
+            modifications_density.update({right_leg_item: density[idx]})
+    
 
-    # Im = np.concatenate((Im_arms, Im_arms, Im_legs, Im_legs))
-    kv = np.concatenate((kv_arms, kv_arms, kv_legs, kv_legs))
     motors_param = {}
     motors_param.update({"I_m": Im})
-    motors_param.update({"k_v":kv})
-    metric1 = compute_fitness_payload_lifting(modifications,motors_param,joint_name_list_updated)
-    metric2 = compute_fitness_walking(modifications, motors_param,joint_name_list_updated)
+    motors_param.update({"k_v":Kv})
+    metric1 = compute_fitness_payload_lifting(modifications,modifications_density,motors_param,joint_name_list_updated)
+    metric2 = compute_fitness_walking(modifications,modifications_density, motors_param,joint_name_list_updated)
     print("METRIC 1", metric1)
     print("METRIC 2", metric2)
 
@@ -378,8 +406,8 @@ toolbox.register("select", tools.selNSGA2)
 
 def main():
     # Determine the number of cores to use
-    num_cores = 10
-    num_cores = multiprocessing.cpu_count() - 1  # Use all but one core
+    num_cores = 1
+    # num_cores = multiprocessing.cpu_count() - 1  # Use all but one core
     if num_cores < 1:
         num_cores = 1  # Ensure at least one core is used
 
