@@ -43,7 +43,7 @@ pip install --no-deps -e .
 Working with drake as the simulator backend requires the following additional dependencies,
 ```
 conda install meshio tqdm
-pip install drake git+https://github.com/akhilsathuluri/odio_urdf.git@comodo
+pip install drake git+https://github.com/ami-iit/amo_urdf
 ```
 
 ## Usage 

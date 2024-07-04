@@ -2,7 +2,7 @@ import logging
 import math
 
 import numpy as np
-from odio_urdf import xml_to_odio
+from amo_urdf import xml_to_amo
 from pydrake.common.eigen_geometry import Quaternion
 from pydrake.geometry import MeshcatVisualizer, StartMeshcat
 from pydrake.math import RigidTransform
@@ -33,7 +33,9 @@ class DrakeSimulator(SimulatorAbstract):
         self.active_meshcat = False
         super().__init__()
 
-    def load_model(self, robot_model, s, xyz_rpy, kv_motors=None, Im=None, keep_collision_meshes=[]):
+    def load_model(
+        self, robot_model, s, xyz_rpy, kv_motors=None, Im=None, keep_collision_meshes=[]
+    ):
         # load the robot model construct the diagram and store the simulator
         self.robot_model = robot_model
         self.urdf_string = robot_model.urdf_string
@@ -42,7 +44,7 @@ class DrakeSimulator(SimulatorAbstract):
         self.duh.load_urdf(urdf_string=self.urdf_string)
         self.duh.remove_all_collisions(keep_collision_meshes)
         self.duh.fix_not_in_joint_list(self.robot_model.joint_name_list)
-        self.duh.convert_xml_to_odio()
+        self.duh.convert_xml_to_amo()
         self.duh.add_acutation_tags()
         self.urdf_string = self.duh.get_urdf_string()
 
@@ -60,7 +62,9 @@ class DrakeSimulator(SimulatorAbstract):
         )[0]
 
         # TODO: Use Im and Km to add motor params here
-        logging.warning("NotImplementedWarning: Motor parameters are currently ignored.")
+        logging.warning(
+            "NotImplementedWarning: Motor parameters are currently ignored."
+        )
         # ignoring those arguments for now
 
         # add the ground and the feet
@@ -133,10 +137,13 @@ class DrakeSimulator(SimulatorAbstract):
         # pass meshcat to visualise the robot
         self.visualize_robot_flag = visualize_robot
         if self.visualize_robot_flag and not self.active_meshcat:
-            logging.info("Visualisation for drake via meshcat can be accessd via the url output from the execution.")
+            logging.info(
+                "Visualisation for drake via meshcat can be accessd via the url output from the execution."
+            )
             self.meshcat = StartMeshcat()
             self.active_meshcat = True
         pass
+
     def set_base_pose_in_drake(self, xyz_rpy):
         base_xyz_quat = np.zeros(7)
         # order -- quaternion+xyz
@@ -159,7 +166,9 @@ class DrakeSimulator(SimulatorAbstract):
         pass
 
     def step_with_motors(self, n_step, torque, visualize=True):
-        logging.warning("NotImplementedWarning: Stepping with motor parameters is not yet implemented.")
+        logging.warning(
+            "NotImplementedWarning: Stepping with motor parameters is not yet implemented."
+        )
         self.simulator.AdvanceTo(self.context.get_time() + n_step * self.time_step)
         if visualize and self.visualize_robot_flag:
             self.diagram.ForcedPublish(self.context)
