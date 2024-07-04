@@ -10,7 +10,7 @@ from pathlib import Path
 
 import meshio
 import numpy as np
-from odio_urdf import *
+from amo_urdf import *
 from pydrake.geometry import (
     AddCompliantHydroelasticProperties,
     AddContactMaterial,
@@ -83,16 +83,16 @@ class DrakeURDFHelper:
             if j.attrib["name"] not in red_joint_name_list:
                 j.attrib["type"] = "fixed"
 
-    def convert_xml_to_odio(self):
-        """Converts the loaded xml to odio urdf format"""
-        # convert the xml to odio urdf format
-        self.odio_robot_dsl = xml_to_odio(self.root)
+    def convert_xml_to_amo(self):
+        """Converts the loaded xml to amo urdf format"""
+        # convert the xml to amo urdf format
+        self.amo_robot_dsl = xml_to_amo(self.root)
         # blockPrint()
-        self.odio_robot = eval(self.odio_robot_dsl)
+        self.amo_robot = eval(self.amo_robot_dsl)
         # enablePrint()
 
     def add_acutation_tags(self):
-        """Adds the actuation tags to the odio urdf"""
+        """Adds the actuation tags to the amo urdf"""
         # extract all the non-fixed joints
         joints = self.root.findall("./joint")
         joint_names = []
@@ -100,7 +100,7 @@ class DrakeURDFHelper:
             if j.attrib["type"] != "fixed":
                 joint_names.append([j.attrib["name"], j.attrib["type"]])
 
-        # add actuation tags to the odio urdf
+        # add actuation tags to the amo urdf
         for j in joint_names:
             actuator_name = "actuator_" + j[0]
             transmission_name = "transmission" + j[0]
@@ -111,22 +111,22 @@ class DrakeURDFHelper:
                 name=transmission_name,
             )
             # Add the transmission to the robot URDF
-            self.odio_robot(temp_trans)
+            self.amo_robot(temp_trans)
 
     def write_to_file(self, urdf_name):
-        """Writes the odio urdf to a file"""
+        """Writes the amo_urdf to a file"""
         # create a folder in the current directory called urdfs
         if not os.path.exists(self.urdf_out_path):
             os.makedirs(self.urdf_out_path)
         filename = self.urdf_out_path + "/" + urdf_name + ".urdf"
         with open(filename, "w") as f:
-            print(self.odio_robot, file=f)
+            print(self.amo_robot, file=f)
 
         logging.info("Saved the urdf to {}".format(filename))
 
     def get_urdf_string(self):
         """Returns the urdf string"""
-        return str(self.odio_robot)
+        return str(self.amo_robot)
 
     def get_sim_joint_order(self, plant, robot_model_sim):
         sim_joint_order = []
@@ -144,7 +144,10 @@ class DrakeURDFHelper:
         proximity_properties_ground = ProximityProperties()
         # https://drake.mit.edu/pydrake/pydrake.geometry.html?highlight=addcontactmaterial#pydrake.geometry.AddContactMaterial
         AddContactMaterial(
-            dissipation=1e4, point_stiffness=1e7, friction=surface_friction_ground, properties=proximity_properties_ground, 
+            dissipation=1e4,
+            point_stiffness=1e7,
+            friction=surface_friction_ground,
+            properties=proximity_properties_ground,
         )
         AddRigidHydroelasticProperties(0.01, proximity_properties_ground)
 
@@ -160,7 +163,9 @@ class DrakeURDFHelper:
             RigidTransform(),
             HalfSpace(),
             "ground_visual",
-            np.array([0.5, 0.5, 0.5, 0.0]), # modify to set the RGBA color of the ground plane
+            np.array(
+                [0.5, 0.5, 0.5, 0.0]
+            ),  # modify to set the RGBA color of the ground plane
         )
 
     def add_soft_feet_collisions(self, plant, xMinMax, yMinMax, foot_frames):
@@ -169,10 +174,17 @@ class DrakeURDFHelper:
         )
         proximity_properties_feet = ProximityProperties()
         AddContactMaterial(
-            dissipation=1e4, point_stiffness=1e7, friction=surface_friction_feet, properties=proximity_properties_feet, 
+            dissipation=1e4,
+            point_stiffness=1e7,
+            friction=surface_friction_feet,
+            properties=proximity_properties_feet,
         )
         # https://drake.mit.edu/pydrake/pydrake.geometry.html?highlight=addcontactmaterial#pydrake.geometry.AddCompliantHydroelasticProperties
-        AddCompliantHydroelasticProperties(resolution_hint=0.01, hydroelastic_modulus=1e8, properties=proximity_properties_feet)
+        AddCompliantHydroelasticProperties(
+            resolution_hint=0.01,
+            hydroelastic_modulus=1e8,
+            properties=proximity_properties_feet,
+        )
 
         for ii in foot_frames:
             # for collision
@@ -190,5 +202,7 @@ class DrakeURDFHelper:
                 RigidTransform(np.array([0, 0, 0])),
                 BoxDrake((xMinMax[1] - xMinMax[0]) / 2, yMinMax[1] - yMinMax[0], 2e-3),
                 ii + "_collision",
-                np.array([1.0, 1.0, 1.0, 1]), # modify to set the RGBA color of the feet collisions
+                np.array(
+                    [1.0, 1.0, 1.0, 1]
+                ),  # modify to set the RGBA color of the feet collisions
             )
