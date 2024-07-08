@@ -272,7 +272,7 @@ class RobotModel(KinDynComputations):
         cost_function += cs.sumsqr(H_right_foot[:2, 3] - right_foot_pos[:2])
         self.solver.minimize(cost_function)
         try:
-            self,sol = self.solver.solve()
+            self.sol = self.solver.solve()
         except:
             return False, None, None, None 
         self.sol = self.solver.solve()
@@ -336,8 +336,8 @@ class RobotModel(KinDynComputations):
 
     def get_mujoco_urdf_string(self):
         ## We first start by ET
-        tempFileOut = tempfile.NamedTemporaryFile(mode="w+")
-        tempFileOut.write(copy.deepcopy(self.urdf_string))
+        # tempFileOut = tempfile.NamedTemporaryFile(mode="w+")
+        # tempFileOut.write(copy.deepcopy(self.urdf_string))
         root = ET.fromstring(self.urdf_string)
         self.mujoco_joint_order = []
         # Declaring as fixed the not controlled joints
@@ -412,9 +412,8 @@ class RobotModel(KinDynComputations):
         urdf_string = self.get_mujoco_urdf_string()
 
         mujoco_model = mujoco.MjModel.from_xml_string(urdf_string)
-        # path_temp_xml = tempfile.NamedTemporaryFile(mode="w+")
-        path_temp_xml = "/home/carlotta/iit_ws/comodo/test.xml"
-        mujoco.mj_saveLastXML(path_temp_xml, mujoco_model)
+        path_temp_xml = tempfile.NamedTemporaryFile(mode="w+")
+        mujoco.mj_saveLastXML(path_temp_xml.name, mujoco_model)
 
         # Adding the Motors
         tree = ET.parse(path_temp_xml)

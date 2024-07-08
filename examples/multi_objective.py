@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import pickle  # For saving data
 from include.chromosomeGenerator import ChromosomeGenerator, SubChromosome, NameChromosome 
 import multiprocessing
+from concurrent.futures import ThreadPoolExecutor
+import os 
+from include.dataBaseFitnessFunction import DatabaseFitnessFunction
 
 joint_name_list = [
     "r_shoulder_pitch",
@@ -29,11 +32,14 @@ joint_name_list = [
     "l_ankle_roll",
 ]
 
-POPULATION_SIZE = 10
-GENERATIONS = 50
-
+POPULATION_SIZE = 100
+GENERATIONS = 300
+common_path = os.path.dirname(os.path.abspath(__file__))
+SAVE_PATH = common_path + "/result/"
+os.mkdir(SAVE_PATH)
+ 
 chrom_generator = ChromosomeGenerator()
-link_names = ["root_link","chest","upper_arm", "forearm","lower_leg","hip_3"]
+link_names = ["root_link","upper_arm", "forearm","lower_leg","hip_3"]
 
 ## length multiplier 
 length_multiplier = SubChromosome()
@@ -44,12 +50,13 @@ length_multiplier.dimension = len(link_names)
 chrom_generator.add_parameters(length_multiplier)
 
 ## density 
-density_param = SubChromosome()
-density_param.type = NameChromosome.DENSITY
-density_param.isDiscrete = True 
-density_param.feasible_set= [ 2129.2952964, 1199.07622408, 893.10763518, 626.60271872, 1661.68632652, 727.43130782, 600.50011475, 2222.0327914,]
-density_param.dimension = len(link_names)
-chrom_generator.add_parameters(density_param)
+# density_param = SubChromosome()
+# density_param.type = NameChromosome.DENSITY
+# density_param.isDiscrete = True 
+# density_param.feasible_sedeft= [ 2129.2952964, 1199.07622408, 893.10763518, 626.60271872, 1661.68632652, 727.43130782, 600.50011475, 2222.0327914,]
+# density_param.dimension = len(link_names)
+# chrom_generator.add_parameters(density_param)
+
 ## joint type 
 #TODO also the planning should be parametrized w.r.t. the joint name list 
 jointTypeCh = SubChromosome()
@@ -60,20 +67,20 @@ jointTypeCh.feasible_set = [0,1]
 chrom_generator.add_parameters(jointTypeCh)
 
 ## motors inerita 
-motors_inertia = SubChromosome()
-motors_inertia.type = NameChromosome.MOTOR_INERTIA
-motors_inertia.dimension = 10 # TODO find a way to automatically ensure symetry  
-motors_inertia.isFloat = True 
-motors_inertia.limits=[1e-5, 1e-1]
-chrom_generator.add_parameters(motors_inertia)
+# motors_inertia = SubChromosome()
+# motors_inertia.type = NameChromosome.MOTOR_INERTIA
+# motors_inertia.dimension = 10 # TODO find a way to automatically ensure symetry  
+# motors_inertia.isFloat = True 
+# motors_inertia.limits=[1e-5, 1e-1]
+# chrom_generator.add_parameters(motors_inertia)
 
-## motors friction 
-motors_friction = SubChromosome()
-motors_friction.type = NameChromosome.MOTOR_FRICTION
-motors_friction.dimension = 10 # TODO find a way to automatically ensure symetry  
-motors_friction.isFloat = True 
-motors_friction.limits=[0.001, 0.1]
-chrom_generator.add_parameters(motors_friction)
+# ## motors friction 
+# motors_friction = SubChromosome()
+# motors_friction.type = NameChromosome.MOTOR_FRICTION
+# motors_friction.dimension = 10 # TODO find a way to automatically ensure symetry  
+# motors_friction.isFloat = True 
+# motors_friction.limits=[0.001, 0.1]
+# chrom_generator.add_parameters(motors_friction)
 
 
 # Define a fitness class with weights (-1.0, -1.0) for minimization problems
@@ -146,17 +153,17 @@ torso_link = ['root_link', 'torso_1', 'torso_2', 'chest']
 
 ## This will be to be better organize
 
-def compute_fitness_payload_lifting(modifications_length, modifications_densities,motors_param,joint_name_list_updated): 
+def compute_fitness_payload_lifting(modifications_length, modifications_densities,motors_param,joint_name_list_updated,joint_active): 
     # Modify the robot model and initialize
     create_urdf_instance.modify_lengths(modifications_length)
-    create_urdf_instance.modify_densities(modifications_densities)
+    # create_urdf_instance.modify_densities(modifications_densities)
     urdf_robot_string = create_urdf_instance.write_urdf_to_file()
     create_urdf_instance.reset_modifications()
     robot_model_init = RobotModel(urdf_robot_string, "stickBot", joint_name_list_updated)
     robot_model_init.set_with_box(True)
     ## Planning the ergonomic trajectory for payload lifting 
     plan_trajectory = PlanErgonomyTrajectory(robot_model=robot_model_init)
-    TIME_TH = 20
+    TIME_TH = 16
 
     if(not(plan_trajectory.plan_trajectory())):
         return TIME_TH
@@ -173,7 +180,7 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
     ## Defining controller 
     lifting_controller_instance = PayloadLiftingController(frequency=0.01, robot_model=robot_model_init)
     lifting_controller_instance.set_state(s,ds,t)
-    param_lifting_controller = PayloadLiftingControllerParameters()
+    param_lifting_controller = PayloadLiftingControllerParameters(joint_active)
     lifting_controller_instance.set_control_gains(
     postural_Kp=param_lifting_controller.joints_Kp_parameters,
     CoM_Kp=param_lifting_controller.CoM_Kp,
@@ -185,7 +192,7 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
     )
     n_step = int(lifting_controller_instance.frequency/mujoco_instance.get_simulation_frequency())
 
-    while(t<TIME_TH):     
+    while(t<TIME_TH):    
         # Updating the states 
         s,ds,tau = mujoco_instance.get_state()
         t = mujoco_instance.get_simulation_time()
@@ -202,12 +209,12 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
     mujoco_instance.close_visualization()
     return TIME_TH -t
 
-def compute_fitness_walking(modifications_length, modifications_densities, motors_param,joint_name_list_updated):
+def compute_fitness_walking(modifications_length, modifications_densities, motors_param,joint_name_list_updated,joint_active):
     # Modify the robot model and initialize
      # Set loop variables
     TIME_TH = 20
     create_urdf_instance.modify_lengths(modifications_length)
-    create_urdf_instance.modify_densities(modifications_densities)
+    # create_urdf_instance.modify_densities(modifications_densities)
     urdf_robot_string = create_urdf_instance.write_urdf_to_file()
     create_urdf_instance.reset_modifications()
     robot_model_init = RobotModel(urdf_robot_string, "stickBot", joint_name_list_updated)
@@ -226,19 +233,16 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
     mujoco_instance.set_visualize_robot_flag(False)
     # Define the controller parameters  and instantiate the controller
     # Controller Parameters
-    tsid_parameter = TSIDParameterTuning()
+    tsid_parameter = TSIDParameterTuning(joint_active)
     mpc_parameters = MPCParameterTuning()
-
     # TSID Instance
     TSID_controller_instance = TSIDController(frequency=0.01, robot_model=robot_model_init)
     TSID_controller_instance.define_tasks(tsid_parameter)
     TSID_controller_instance.set_state_with_base(s, ds, H_b, w_b, t)
-
     # MPC Instance
     step_lenght = 0.1
     mpc = CentroidalMPC(robot_model=robot_model_init, step_length=step_lenght)
     mpc.intialize_mpc(mpc_parameters=mpc_parameters)
-
     # Set desired quantities
     mpc.configure(s_init=s_des, H_b_init=H_b)
     TSID_controller_instance.compute_com_position()
@@ -252,19 +256,16 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
     H_b = mujoco_instance.get_base()
     w_b = mujoco_instance.get_base_velocity()
     t = mujoco_instance.get_simulation_time()
-
     # MPC
     mpc.set_state_with_base(s=s, s_dot=ds, H_b=H_b, w_b=w_b, t=t)
     mpc.initialize_centroidal_integrator(s=s, s_dot=ds, H_b=H_b, w_b=w_b, t=t)
     mpc_output = mpc.plan_trajectory()
-   
-
+    
     # Define number of steps
     n_step = int(
         TSID_controller_instance.frequency / mujoco_instance.get_simulation_frequency()
     )
     n_step_mpc_tsid = int(mpc.get_frequency_seconds() / TSID_controller_instance.frequency)
-
     counter = 0
     mpc_success = True
     energy_tot = 0.0
@@ -327,14 +328,20 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
     mujoco_instance.close_visualization()
     return TIME_TH-t 
 
+def evaluate_from_database(individual):
+    data_base = DatabaseFitnessFunction(SAVE_PATH + "database")
+    fit1, fit2 = data_base.get_fitness_value(individual)
+    return fit1, fit2
+
 def evaluate(individual):
     # Define the robot modifications
     dict_return = chrom_generator.get_chromosome_dict(individual)
     links_length = dict_return[NameChromosome.LENGTH]
-    density = dict_return[NameChromosome.DENSITY]
+    # density = dict_return[NameChromosome.DENSITY]
     joint_active_temp = dict_return[NameChromosome.JOINT_TYPE]
-    motor_inertia_param_temp = dict_return[NameChromosome.MOTOR_INERTIA]
-    motor_friction_temp = dict_return[NameChromosome.MOTOR_FRICTION]
+    joint_active_temp[3] = 1 # the elbow always active for now, if not there are issues in attaching the box to the hand in mujoco 
+    # motor_inertia_param_temp = dict_return[0.8880754212296234, 1.2677991421185684, 0.5560596513676981, 0.869871841987746, 1.734054392727016, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1][NameChromosome.MOTOR_INERTIA]
+    # motor_friction_temp = dict_return[NameChromosome.MOTOR_FRICTION]
     joint_name_list_updated =[]
     Im = []
     Kv = []
@@ -343,23 +350,23 @@ def evaluate(individual):
     joint_active.extend(joint_active_temp[:4])
     joint_active.extend(joint_active_temp[4:])
     joint_active.extend(joint_active_temp[4:])
-    motor_inertia_param = []
-    motor_inertia_param.extend(motor_inertia_param_temp[:4])
-    motor_inertia_param.extend(motor_inertia_param_temp[:4])
-    motor_inertia_param.extend(motor_inertia_param_temp[4:])
-    motor_inertia_param.extend(motor_inertia_param_temp[4:])
-    motor_friction_param = []
-    motor_friction_param.extend(motor_friction_temp[:4])
-    motor_friction_param.extend(motor_friction_temp[:4])
-    motor_friction_param.extend(motor_friction_temp[4:])
-    motor_friction_param.extend(motor_friction_temp[4:])
+    # motor_inertia_param = []
+    # motor_inertia_param.extend(motor_inertia_param_temp[:4])
+    # motor_inertia_param.extend(motor_inertia_param_temp[:4])
+    # motor_inertia_param.extend(motor_inertia_param_temp[4:])
+    # motor_inertia_param.extend(motor_inertia_param_temp[4:])
+    # motor_friction_param = []
+    # motor_friction_param.extend(motor_friction_temp[:4])
+    # motor_friction_param.extend(motor_friction_temp[:4])
+    # motor_friction_param.extend(motor_friction_temp[4:])
+    # motor_friction_param.extend(motor_friction_temp[4:])
     
     # This is needed because not all joints will be active, and only the active one will have motor characteristics 
     for idx_joint in range(len(joint_active)):
         if(joint_active[idx_joint]== 1):
             joint_name_list_updated.append(joint_name_list[idx_joint])
-            Im.append(motor_inertia_param[idx_joint])
-            Kv.append(motor_friction_param[idx_joint])
+            # Im.append(motor_inertia_param[idx_joint])
+            # Kv.append(motor_friction_param[idx_joint])
 
 
     modifications = {}
@@ -367,28 +374,38 @@ def evaluate(individual):
     for idx,item in enumerate(link_names):
         if(item in torso_link):
             modifications.update({item: links_length[idx]})
-            modifications_density.update({item:density[idx]})
+            # modifications_density.update({item:density[idx]})
         else:    
             left_leg_item = "l_" + item
             right_leg_item = "r_" + item
             
             modifications.update({left_leg_item: links_length[idx]})
             modifications.update({right_leg_item: links_length[idx]})
-            modifications_density.update({left_leg_item: density[idx]})
-            modifications_density.update({right_leg_item: density[idx]})
+            # modifications_density.update({left_leg_item: density[idx]})
+            # modifications_density.update({right_leg_item: density[idx]})
     
 
     motors_param = {}
-    motors_param.update({"I_m": Im})
-    motors_param.update({"k_v":Kv})
-    metric1 = compute_fitness_payload_lifting(modifications,modifications_density,motors_param,joint_name_list_updated)
-    metric2 = compute_fitness_walking(modifications,modifications_density, motors_param,joint_name_list_updated)
-    print("METRIC 1", metric1)
-    print("METRIC 2", metric2)
-
+    motors_param.update({"I_m": None})
+    motors_param.update({"k_v":None})
+    metric2 = compute_fitness_walking(modifications,modifications_density, motors_param,joint_name_list_updated,joint_active)
+    metric1 = compute_fitness_payload_lifting(modifications,modifications_density,motors_param,joint_name_list_updated,joint_active)
     return metric1, metric2
 
-toolbox.register("evaluate", evaluate)
+toolbox.register("evaluate", evaluate_from_database)
+
+def compute_fitness_list_chromosome(list_chromosome):
+    n_processors = len(list_chromosome)
+    # compute fitness function
+    with multiprocessing.Pool(processes=n_processors) as pool:
+        output_map = pool.map(
+            evaluate,
+            list_chromosome,
+        )
+
+    data_base = DatabaseFitnessFunction(SAVE_PATH + "database")
+    for i, chromosome in enumerate(list_chromosome):
+        data_base.update(chromosome=chromosome,fitness_value_1= output_map[i][0],fitness_value_2=output_map[i][1])
 
 def mate(ind1, ind2):
     tools.cxTwoPoint(ind1, ind2)
@@ -398,23 +415,14 @@ def mate(ind1, ind2):
 
 def mutate(ind):
     #TODO to be implemented in the chromosome generator 
-    return ind,
+    ind = chrom_generator.generate_chromosome()
+    return ind
 
 toolbox.register("mate", mate)
 toolbox.register("mutate", mutate)
 toolbox.register("select", tools.selNSGA2)
 
 def main():
-    # Determine the number of cores to use
-    num_cores = 1
-    # num_cores = multiprocessing.cpu_count() - 1  # Use all but one core
-    if num_cores < 1:
-        num_cores = 1  # Ensure at least one core is used
-
-    # # Initialize multiprocessing pool
-    pool = multiprocessing.Pool(num_cores)
-    toolbox.register("map", pool.map)
-    
     population = toolbox.population(n=POPULATION_SIZE)
     all_generations = []  # List to store all generations
     
@@ -440,19 +448,25 @@ def main():
         
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+       
+        compute_fitness_list_chromosome(invalid_ind)
         fitnesses = toolbox.map(toolbox.evaluate, invalid_ind)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
         
         # Replace the old population with the offspring
         population[:] = offspring
-        
+        gen_temp = [toolbox.clone(ind) for ind in population]
+        gen_path = SAVE_PATH+"/generation" + str(gen) + ".p"
+
+        with(open(gen_path,"wb")) as f : 
+            pickle.dump(gen_temp, f)
         # Append the current generation to the list
         all_generations.append([toolbox.clone(ind) for ind in population])
     
     # Close the pool
-    pool.close()
-    pool.join()
+    # pool.close()
+    # pool.join()
 
     with open("all_generations.pkl", "wb") as f:
         pickle.dump(all_generations, f)
@@ -461,24 +475,23 @@ def main():
 
 if __name__ == "__main__":
     final_population, all_generations = main()
-    # all_gen = pickle.load( open("all_generations.pkl" , "rb" ) )
-    # final_population = all_gen[-1]
-    # print(final_population)
+    all_gen = pickle.load( open("all_generations.pkl" , "rb" ) )
+    final_population = all_gen[-1]
     # Extract the Pareto front
     pareto_front = tools.sortNondominated(final_population, len(final_population), first_front_only=True)[0]
 
     # Print the solutions in the Pareto front
     for ind in final_population:
         print(f"Individual: {ind}, Fitness: {ind.fitness.values}")
-
         # Plot the Pareto front
-    fitnesses = [ind.fitness.values for ind in pareto_front]
-    fitness1 = [f[0] for f in fitnesses]
-    fitness2 = [f[1] for f in fitnesses]
+        fitnesses = [ind.fitness.values for ind in pareto_front]
+        fitness1 = [f[0] for f in fitnesses]
+        fitness2 = [f[1] for f in fitnesses]
     
     plt.scatter(fitness1, fitness2, c='red', linewidths=10)
     plt.xlabel('Payload lifting', fontsize="40")
     plt.ylabel('Walking', fontsize="40")
     plt.title('Pareto Front', fontsize="60")
     plt.grid(True)
-    plt.show()
+    plt.savefig(SAVE_PATH + "Pareto.png")
+    # plt.show()
