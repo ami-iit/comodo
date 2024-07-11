@@ -18,9 +18,9 @@ class MPCParameterTuning:
         contact_force_symmetry_weight,
     ):
         # Forcing the x and y component to be one equal to the other
-        self.com_weight = np.asanyarray([com_weight[0], com_weight[0], com_weight[1]])
+        self.com_weight = np.asarray([com_weight[0], com_weight[0], com_weight[1]])
         self.contact_position_weight = contac_position
-        self.force_rate_change_weight = force_rate_change
+        self.force_rate_change_weight = np.asarray([force_rate_change[0],force_rate_change[0],force_rate_change[1]])
         self.angular_momentum_weight = angular_mom_weight
         self.contact_force_symmetry_weight = contact_force_symmetry_weight
 
@@ -28,7 +28,7 @@ class MPCParameterTuning:
         self.set_parameters(
             com_weight=x_k[:2],
             contac_position=x_k[2],
-            force_rate_change=x_k[3:6],
-            angular_mom_weight=x_k[6],
-            contact_force_symmetry_weight=x_k[7],
+            force_rate_change=x_k[3:5],
+            angular_mom_weight=x_k[5],
+            contact_force_symmetry_weight=x_k[6]
         )

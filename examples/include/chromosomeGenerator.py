@@ -7,6 +7,9 @@ class NameChromosome(Enum):
     MOTOR_INERTIA = auto()
     MOTOR_FRICTION = auto()
     JOINT_TYPE = auto()
+    TSID_PARAMTERES = auto()
+    MPC_PARAMETERS  = auto()
+    PAYLOAD_LIFTING = auto()
     NOT_SET = auto()
 
 class SubChromosome():
@@ -21,8 +24,6 @@ class SubChromosome():
 class ChromosomeGenerator(): 
 
     def __init__(self) -> None:
-        # self.n_links = n_links
-        # self.n_joints = n_motors
         self.sub_chromosomes = [] 
         pass
 
@@ -30,6 +31,8 @@ class ChromosomeGenerator():
         self.sub_chromosomes.append(subChr)
 
     def create_float_param(self, limits, n_param):
+        if(len(limits)>2):
+            return[random.uniform(limits[i,0], limits[i,1]) for i in range(n_param)]
         return [random.uniform(limits[0], limits[1]) for _ in range(n_param)] 
     
     def create_discrete_param(self, feasible_set, n_param):
@@ -51,7 +54,11 @@ class ChromosomeGenerator():
         for item in self.sub_chromosomes: 
             for idx in range(item.dimension): 
                 if(item.isFloat): 
-                    ind[idx_start_point+idx] = min(max(ind[idx_start_point+idx], item.limits[0]), item.limits[1])
+                    if(len(item.limits)>2):
+                        ind[idx_start_point+idx] = min(max(ind[idx_start_point+idx], item.limits[idx,0]), item.limits[idx,1])
+                    else:
+                        ind[idx_start_point+idx] = min(max(ind[idx_start_point+idx], item.limits[0]), item.limits[1])
+                
                 elif(item.isDiscrete): 
                     if not(ind[idx_start_point+idx] in item.feasible_set):
                         ind[idx_start_point+idx] = random.choice(item.feasible_set)

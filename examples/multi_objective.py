@@ -8,6 +8,7 @@ import multiprocessing
 from concurrent.futures import ThreadPoolExecutor
 import os 
 from include.dataBaseFitnessFunction import DatabaseFitnessFunction
+import copy
 
 joint_name_list = [
     "r_shoulder_pitch",
@@ -33,13 +34,15 @@ joint_name_list = [
 ]
 
 POPULATION_SIZE = 100
-GENERATIONS = 300
+GENERATIONS = 3000
 common_path = os.path.dirname(os.path.abspath(__file__))
 SAVE_PATH = common_path + "/result/"
 os.mkdir(SAVE_PATH)
  
 chrom_generator = ChromosomeGenerator()
 link_names = ["root_link","upper_arm", "forearm","lower_leg","hip_3"]
+
+#**************************************************************HARDWARE**************************************************************#
 
 ## length multiplier 
 length_multiplier = SubChromosome()
@@ -49,19 +52,18 @@ length_multiplier.limits = [0.5,2.0]
 length_multiplier.dimension = len(link_names)
 chrom_generator.add_parameters(length_multiplier)
 
-## density 
-# density_param = SubChromosome()
-# density_param.type = NameChromosome.DENSITY
-# density_param.isDiscrete = True 
-# density_param.feasible_sedeft= [ 2129.2952964, 1199.07622408, 893.10763518, 626.60271872, 1661.68632652, 727.43130782, 600.50011475, 2222.0327914,]
-# density_param.dimension = len(link_names)
-# chrom_generator.add_parameters(density_param)
+# density 
+density_param = SubChromosome()
+density_param.type = NameChromosome.DENSITY
+density_param.isDiscrete = True 
+density_param.feasible_set= [ 2129.2952964, 1199.07622408, 893.10763518, 626.60271872, 1661.68632652, 727.43130782, 600.50011475, 2222.0327914,]
+density_param.dimension = len(link_names)
+chrom_generator.add_parameters(density_param)
 
 ## joint type 
-#TODO also the planning should be parametrized w.r.t. the joint name list 
 jointTypeCh = SubChromosome()
 jointTypeCh.type = NameChromosome.JOINT_TYPE
-jointTypeCh.dimension = 10
+jointTypeCh.dimension = 9
 jointTypeCh.isDiscrete = True 
 jointTypeCh.feasible_set = [0,1]
 chrom_generator.add_parameters(jointTypeCh)
@@ -83,6 +85,32 @@ chrom_generator.add_parameters(jointTypeCh)
 # chrom_generator.add_parameters(motors_friction)
 
 
+#**************************************************************CONTROL**************************************************************#
+
+## TSID 
+tsid_parameters = SubChromosome()
+tsid_parameters.type = NameChromosome.TSID_PARAMTERES
+tsid_parameters.isFloat = True
+tsid_parameters.dimension = 4 
+tsid_parameters.limits = np.array([[4, 50],[100, 400],[20, 100],[4, 50]])
+chrom_generator.add_parameters(tsid_parameters)
+
+## MPC 
+mpc_parameters = SubChromosome()
+mpc_parameters.type = NameChromosome.MPC_PARAMETERS
+mpc_parameters.isFloat = True 
+mpc_parameters.dimension = 7
+mpc_parameters.limits = np.array([[5,60],[20,100],[10,140],[10,140],[10,140],[10,140],[10,140],[10,140]])
+chrom_generator.add_parameters(mpc_parameters)
+
+
+lifting_parameters = SubChromosome()
+lifting_parameters.type = NameChromosome.PAYLOAD_LIFTING
+lifting_parameters.isFloat = True
+lifting_parameters.dimension = 6
+lifting_parameters.limits = np.array([[0.5,10],[0.5,10],[0.01, 0.05],[0.01, 0.05],[20,100],[20,100]])
+chrom_generator.add_parameters(lifting_parameters)
+
 # Define a fitness class with weights (-1.0, -1.0) for minimization problems
 creator.create("FitnessMulti", base.Fitness, weights=(-1.0, -1.0))
 
@@ -94,7 +122,6 @@ toolbox = base.Toolbox()
 toolbox.register("individual", tools.initIterate, creator.Individual, chrom_generator.generate_chromosome)
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-## TODO improve this is only to see if things work 
 # Comodo import
 from comodo.mujocoSimulator.mujocoSimulator import MujocoSimulator
 from comodo.robotModel.robotModel import RobotModel
@@ -153,10 +180,10 @@ torso_link = ['root_link', 'torso_1', 'torso_2', 'chest']
 
 ## This will be to be better organize
 
-def compute_fitness_payload_lifting(modifications_length, modifications_densities,motors_param,joint_name_list_updated,joint_active): 
+def compute_fitness_payload_lifting(modifications_length, modifications_densities,motors_param,joint_name_list_updated,joint_active, lifting_ch): 
     # Modify the robot model and initialize
     create_urdf_instance.modify_lengths(modifications_length)
-    # create_urdf_instance.modify_densities(modifications_densities)
+    create_urdf_instance.modify_densities(modifications_densities)
     urdf_robot_string = create_urdf_instance.write_urdf_to_file()
     create_urdf_instance.reset_modifications()
     robot_model_init = RobotModel(urdf_robot_string, "stickBot", joint_name_list_updated)
@@ -181,10 +208,9 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
     lifting_controller_instance = PayloadLiftingController(frequency=0.01, robot_model=robot_model_init)
     lifting_controller_instance.set_state(s,ds,t)
     param_lifting_controller = PayloadLiftingControllerParameters(joint_active)
+    param_lifting_controller.set_from_xk(lifting_ch)
     lifting_controller_instance.set_control_gains(
-    postural_Kp=param_lifting_controller.joints_Kp_parameters,
-    CoM_Kp=param_lifting_controller.CoM_Kp,
-    CoM_Ki=param_lifting_controller.CoM_Ki,
+        param_lifting_controller
     )
     lifting_controller_instance.set_time_interval_state_machine(1, 5, 5)
     lifting_controller_instance.initialize_state_machine(
@@ -209,12 +235,12 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
     mujoco_instance.close_visualization()
     return TIME_TH -t
 
-def compute_fitness_walking(modifications_length, modifications_densities, motors_param,joint_name_list_updated,joint_active):
+def compute_fitness_walking(modifications_length, modifications_densities, motors_param,joint_name_list_updated,joint_active, mpc_chr, tsid_chr):
     # Modify the robot model and initialize
      # Set loop variables
     TIME_TH = 20
     create_urdf_instance.modify_lengths(modifications_length)
-    # create_urdf_instance.modify_densities(modifications_densities)
+    create_urdf_instance.modify_densities(modifications_densities)
     urdf_robot_string = create_urdf_instance.write_urdf_to_file()
     create_urdf_instance.reset_modifications()
     robot_model_init = RobotModel(urdf_robot_string, "stickBot", joint_name_list_updated)
@@ -234,7 +260,9 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
     # Define the controller parameters  and instantiate the controller
     # Controller Parameters
     tsid_parameter = TSIDParameterTuning(joint_active)
+    tsid_parameter.set_from_x_k(tsid_chr)
     mpc_parameters = MPCParameterTuning()
+    mpc_parameters.set_from_xk(mpc_chr)
     # TSID Instance
     TSID_controller_instance = TSIDController(frequency=0.01, robot_model=robot_model_init)
     TSID_controller_instance.define_tasks(tsid_parameter)
@@ -346,10 +374,13 @@ def evaluate(individual):
     Im = []
     Kv = []
     joint_active = []
-    joint_active.extend(joint_active_temp[:4])
-    joint_active.extend(joint_active_temp[:4])
-    joint_active.extend(joint_active_temp[4:])
-    joint_active.extend(joint_active_temp[4:])
+    joint_arms = []
+    joint_arms.extend(joint_active_temp[:3])
+    joint_arms.extend([1]) # The elbow is always active 
+    joint_active.extend(joint_arms)
+    joint_active.extend(joint_arms)
+    joint_active.extend(joint_active_temp[3:])
+    joint_active.extend(joint_active_temp[3:])
     # motor_inertia_param = []
     # motor_inertia_param.extend(motor_inertia_param_temp[:4])
     # motor_inertia_param.extend(motor_inertia_param_temp[:4])
@@ -388,8 +419,12 @@ def evaluate(individual):
     motors_param = {}
     motors_param.update({"I_m": None})
     motors_param.update({"k_v":None})
-    metric2 = compute_fitness_walking(modifications,modifications_density, motors_param,joint_name_list_updated,joint_active)
-    metric1 = compute_fitness_payload_lifting(modifications,modifications_density,motors_param,joint_name_list_updated,joint_active)
+    mpc_p = dict_return[NameChromosome.MPC_PARAMETERS]
+    tsid_p = dict_return[NameChromosome.TSID_PARAMTERES]
+    lifting_p = dict_return[NameChromosome.PAYLOAD_LIFTING]
+    print("IMPORTANTEEE",mpc_p)
+    metric2 = compute_fitness_walking(modifications,modifications_density, motors_param,joint_name_list_updated,joint_active, mpc_p, tsid_p)
+    metric1 = compute_fitness_payload_lifting(modifications,modifications_density,motors_param,joint_name_list_updated,joint_active, lifting_p)
     return metric1, metric2
 
 toolbox.register("evaluate", evaluate_from_database)

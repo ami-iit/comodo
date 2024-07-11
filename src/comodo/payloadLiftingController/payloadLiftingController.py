@@ -1,4 +1,5 @@
 from comodo.abstractClasses.controller import Controller
+from comodo.payloadLiftingController.payloadLiftingParameterTuning import PayloadLiftingControllerParameters
 import time
 import numpy as np
 from wholebodycontrollib import statemachine
@@ -27,14 +28,14 @@ class PayloadLiftingController(Controller):
         super().__init__(frequency, robot_model)
 
     def set_control_gains(
-        self, postural_Kp: np.array, CoM_Kp: np.array, CoM_Ki: np.array
+        self, parameters: PayloadLiftingControllerParameters
     ):
 
         self.postural_task_controller = wholebodycontrol.PosturalTaskController(
             self.model.ndof
         )
         postural_task_gain = wholebodycontrol.PosturalTaskGain(self.model.ndof)
-        postural_task_gain.Kp = np.diag(postural_Kp)
+        postural_task_gain.Kp = np.diag(parameters.joints_Kp_parameters)
         postural_task_gain.Kd = 2 * np.power(postural_task_gain.Kp, 1 / 2) / 10
         self.postural_task_controller.set_gain(postural_task_gain)
         self.postural_task_controller.set_desired_posture(self.s, self.s_dot)
@@ -43,10 +44,8 @@ class PayloadLiftingController(Controller):
             self.model.kindyn.model().getTotalMass()
         )
         momentum_controller_gain = wholebodycontrol.MomentumControllerGain()
-        momentum_controller_gain.Ki = CoM_Ki  # np.array([50, 50, 100, 0, 0, 0])
-        momentum_controller_gain.Kp = (
-            CoM_Kp  # np.array([1.5, 1.5, 2, 0.025, 0.025, 0.025])
-        )
+        momentum_controller_gain.Ki = parameters.momentum_ki  # np.array([50, 50, 100, 0, 0, 0])
+        momentum_controller_gain.Kp = parameters.momentum_kp 
         self.momentum_controller.set_gain(momentum_controller_gain)
         self.momentum_controller.set_desired_center_of_mass_trajectory(
             self.p_com, np.zeros(3), np.zeros(3)
