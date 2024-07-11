@@ -476,22 +476,27 @@ def main():
 if __name__ == "__main__":
     final_population, all_generations = main()
     all_gen = pickle.load( open("all_generations.pkl" , "rb" ) )
+    # final_population = pickle.load(open("result/generation80.p", "rb"))
     final_population = all_gen[-1]
     # Extract the Pareto front
-    pareto_front = tools.sortNondominated(final_population, len(final_population), first_front_only=True)[0]
+    pareto_front = tools.ParetoFront()
+    pareto_front.update(final_population)
 
     # Print the solutions in the Pareto front
     for ind in final_population:
         print(f"Individual: {ind}, Fitness: {ind.fitness.values}")
         # Plot the Pareto front
-        fitnesses = [ind.fitness.values for ind in pareto_front]
-        fitness1 = [f[0] for f in fitnesses]
-        fitness2 = [f[1] for f in fitnesses]
+    fitnesses = [ind.fitness.values for ind in pareto_front.items]
+    fitness1 = [f[0] for f in fitnesses]
+    fitness2 = [f[1] for f in fitnesses]
     
     plt.scatter(fitness1, fitness2, c='red', linewidths=10)
     plt.xlabel('Payload lifting', fontsize="40")
     plt.ylabel('Walking', fontsize="40")
     plt.title('Pareto Front', fontsize="60")
     plt.grid(True)
+    fig = plt.gcf()
+    fig.set_size_inches((21, 16), forward=False)
     plt.savefig(SAVE_PATH + "Pareto.png")
     # plt.show()
+

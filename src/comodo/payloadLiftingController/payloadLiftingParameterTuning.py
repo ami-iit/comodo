@@ -2,34 +2,12 @@ import numpy as np
 
 
 class PayloadLiftingControllerParameters:
-    def __init__(self) -> None:
-        self.joints_Kp_parameters = (
-            np.array(
-                [
-                    130,
-                    80,
-                    20,
-                    60,
-                    130,
-                    80,
-                    20,
-                    60,
-                    150,
-                    20,
-                    20,
-                    180,
-                    140,
-                    20,
-                    150,
-                    20,
-                    20,
-                    180,
-                    140,
-                    20,
-                ]
-            )
-            * 2.5
-        )
+    def __init__(self, joint_active) -> None:
+        kp_param_temp = np.array([130,80,20,60,130,80,20,60,150,20,20,180,140,20,150,20,20,180,140,20])* 2.5
+        self.joints_Kp_parameters = []
+        for idx,item in enumerate(joint_active):
+            if(item):
+                self.joints_Kp_parameters.append(kp_param_temp[idx])            
         self.CoM_Kp = np.array([1.5, 1.5, 2, 0.025, 0.025, 0.025])
         self.CoM_Ki = np.array([50, 50, 100, 0, 0, 0])
 

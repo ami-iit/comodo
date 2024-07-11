@@ -160,5 +160,13 @@ cython_debug/
 #.idea/
 
 # Pickle file 
-.pkl 
-.p
+*.pkl 
+*.p
+
+# Images
+*.png
+
+# CSV 
+*.csv
+
+*.tar.bz2
