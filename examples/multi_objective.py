@@ -11,6 +11,9 @@ from include.dataBaseFitnessFunction import DatabaseFitnessFunction
 import copy
 
 joint_name_list = [
+    "torso_pitch",
+    "torso_roll",
+    "torso_yaw",
     "r_shoulder_pitch",
     "r_shoulder_roll",
     "r_shoulder_yaw",
@@ -63,7 +66,7 @@ chrom_generator.add_parameters(density_param)
 ## joint type 
 jointTypeCh = SubChromosome()
 jointTypeCh.type = NameChromosome.JOINT_TYPE
-jointTypeCh.dimension = 9
+jointTypeCh.dimension = 12
 jointTypeCh.isDiscrete = True 
 jointTypeCh.feasible_set = [0,1]
 chrom_generator.add_parameters(jointTypeCh)
@@ -153,29 +156,29 @@ robot_urdf_string_original = ET.tostring(root)
 create_urdf_instance = createUrdf(
     original_urdf_path=urdf_robot_file.name, save_gazebo_plugin=False
 )
-# Define parametric links and controlled joints
-joint_name_list = [
-    "r_shoulder_pitch", #0 
-    "r_shoulder_roll",#1 
-    "r_shoulder_yaw",#2 
-    "r_elbow",#3 
-    "l_shoulder_pitch",#4 
-    "l_shoulder_roll",#5 
-    "l_shoulder_yaw",#6 
-    "l_elbow",#7 
-    "r_hip_pitch",#8 
-    "r_hip_roll",#9 
-    "r_hip_yaw",#10 
-    "r_knee",#11 
-    "r_ankle_pitch",#12 
-    "r_ankle_roll",#13 
-    "l_hip_pitch",#14 
-    "l_hip_roll",#15 
-    "l_hip_yaw",#16 
-    "l_knee",#17 
-    "l_ankle_pitch", #18 
-    "l_ankle_roll",#19 
-]
+# # Define parametric links and controlled joints
+# joint_name_list = [
+#     "r_shoulder_pitch", #0 
+#     "r_shoulder_roll",#1 
+#     "r_shoulder_yaw",#2 
+#     "r_elbow",#3 
+#     "l_shoulder_pitch",#4 
+#     "l_shoulder_roll",#5 
+#     "l_shoulder_yaw",#6 
+#     "l_elbow",#7 
+#     "r_hip_pitch",#8 
+#     "r_hip_roll",#9 
+#     "r_hip_yaw",#10 
+#     "r_knee",#11 
+#     "r_ankle_pitch",#12 
+#     "r_ankle_roll",#13 
+#     "l_hip_pitch",#14 
+#     "l_hip_roll",#15 
+#     "l_hip_yaw",#16 
+#     "l_knee",#17 
+#     "l_ankle_pitch", #18 
+#     "l_ankle_roll",#19 
+# ]
 torso_link = ['root_link', 'torso_1', 'torso_2', 'chest']
 
 ## This will be to be better organize
@@ -191,15 +194,17 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
     ## Planning the ergonomic trajectory for payload lifting 
     plan_trajectory = PlanErgonomyTrajectory(robot_model=robot_model_init)
     TIME_TH = 16
-
+    weigth_time = 100
+    torque_norm = []
     if(not(plan_trajectory.plan_trajectory())):
-        return TIME_TH
+        return 100*weigth_time*TIME_TH
        # Define simulator and set initial position
     mujoco_instance = MujocoSimulator()
     mujoco_instance.load_model(
         robot_model_init, s=plan_trajectory.s_opti[0], xyz_rpy=plan_trajectory.xyz_rpy[0], kv_motors=motors_param["k_v"], Im=motors_param["I_m"]
     )
     s, ds, tau = mujoco_instance.get_state()
+    torque_norm.append(np.linalg.norm(tau))
     t = mujoco_instance.get_simulation_time()
     H_b = mujoco_instance.get_base()
     w_b = mujoco_instance.get_base_velocity()
@@ -223,7 +228,7 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
         s,ds,tau = mujoco_instance.get_state()
         t = mujoco_instance.get_simulation_time()
         lifting_controller_instance.set_state(s,ds,t)
-
+        torque_norm.append(np.linalg.norm(tau))
         # Running the controller 
         controller_succed= lifting_controller_instance.run()
         if(not(controller_succed)): 
@@ -232,8 +237,9 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
         mujoco_instance.set_input(tau)
         mujoco_instance.step(int(n_step))
     # Closing visualization
+    fitness = 0.001*(np.mean(torque_norm))  + weigth_time*(TIME_TH + mujoco_instance.get_simulation_frequency()-t)
     mujoco_instance.close_visualization()
-    return TIME_TH -t
+    return fitness
 
 def compute_fitness_walking(modifications_length, modifications_densities, motors_param,joint_name_list_updated,joint_active, mpc_chr, tsid_chr):
     # Modify the robot model and initialize
@@ -245,8 +251,9 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
     create_urdf_instance.reset_modifications()
     robot_model_init = RobotModel(urdf_robot_string, "stickBot", joint_name_list_updated)
     solved, s_des, xyz_rpy, H_b = robot_model_init.compute_desired_position_walking()
+    weigth_time= 100
     if(not(solved)):
-        return TIME_TH
+        return 100*weigth_time*TIME_TH
     # Define simulator and set initial position
     mujoco_instance = MujocoSimulator()
     mujoco_instance.load_model(
@@ -296,13 +303,15 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
     n_step_mpc_tsid = int(mpc.get_frequency_seconds() / TSID_controller_instance.frequency)
     counter = 0
     mpc_success = True
-    energy_tot = 0.0
+    torque_norm = []
     succeded_controller = True
+    weigth_time= 100 
     # Simulation-control loop
     while t < TIME_TH:
         # Reading robot state from simulator
         s, ds, tau = mujoco_instance.get_state()
-        energy_i = np.linalg.norm(tau)
+        torque_norm.append(np.linalg.norm(tau))
+        # energy_i = np.linalg.norm(tau)
         H_b = mujoco_instance.get_base()
         w_b = mujoco_instance.get_base_velocity()
         t = mujoco_instance.get_simulation_time()
@@ -352,9 +361,11 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
 
         if counter == n_step_mpc_tsid:
             counter = 0
+            
+    fitness = 0.001*(np.mean(torque_norm))  + weigth_time*(TIME_TH + mujoco_instance.get_simulation_frequency()-t)
     # Closing visualization
     mujoco_instance.close_visualization()
-    return TIME_TH-t 
+    return fitness 
 
 def evaluate_from_database(individual):
     data_base = DatabaseFitnessFunction(SAVE_PATH + "database")
@@ -365,9 +376,9 @@ def evaluate(individual):
     # Define the robot modifications
     dict_return = chrom_generator.get_chromosome_dict(individual)
     links_length = dict_return[NameChromosome.LENGTH]
-    # density = dict_return[NameChromosome.DENSITY]
+    density = dict_return[NameChromosome.DENSITY]
     joint_active_temp = dict_return[NameChromosome.JOINT_TYPE]
-    joint_active_temp[3] = 1 # the elbow always active for now, if not there are issues in attaching the box to the hand in mujoco 
+    # joint_active_temp[3] = 1 # the elbow always active for now, if not there are issues in attaching the box to the hand in mujoco 
     # motor_inertia_param_temp = dict_return[0.8880754212296234, 1.2677991421185684, 0.5560596513676981, 0.869871841987746, 1.734054392727016, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1][NameChromosome.MOTOR_INERTIA]
     # motor_friction_temp = dict_return[NameChromosome.MOTOR_FRICTION]
     joint_name_list_updated =[]
@@ -375,12 +386,13 @@ def evaluate(individual):
     Kv = []
     joint_active = []
     joint_arms = []
-    joint_arms.extend(joint_active_temp[:3])
+    joint_active.extend(joint_active_temp[:3])
+    joint_arms.extend(joint_active_temp[3:6])
     joint_arms.extend([1]) # The elbow is always active 
     joint_active.extend(joint_arms)
     joint_active.extend(joint_arms)
-    joint_active.extend(joint_active_temp[3:])
-    joint_active.extend(joint_active_temp[3:])
+    joint_active.extend(joint_active_temp[6:])
+    joint_active.extend(joint_active_temp[6:])
     # motor_inertia_param = []
     # motor_inertia_param.extend(motor_inertia_param_temp[:4])
     # motor_inertia_param.extend(motor_inertia_param_temp[:4])
@@ -405,15 +417,15 @@ def evaluate(individual):
     for idx,item in enumerate(link_names):
         if(item in torso_link):
             modifications.update({item: links_length[idx]})
-            # modifications_density.update({item:density[idx]})
+            modifications_density.update({item:density[idx]})
         else:    
             left_leg_item = "l_" + item
             right_leg_item = "r_" + item
             
             modifications.update({left_leg_item: links_length[idx]})
             modifications.update({right_leg_item: links_length[idx]})
-            # modifications_density.update({left_leg_item: density[idx]})
-            # modifications_density.update({right_leg_item: density[idx]})
+            modifications_density.update({left_leg_item: density[idx]})
+            modifications_density.update({right_leg_item: density[idx]})
     
 
     motors_param = {}
@@ -449,8 +461,9 @@ def mate(ind1, ind2):
     return ind1, ind2
 
 def mutate(ind):
-    #TODO to be implemented in the chromosome generator 
-    ind = chrom_generator.generate_chromosome()
+    for i in range(len(ind)):
+        if random.random() < 1/len(ind):
+            ind[i] = chrom_generator.generate_chromosome()[i]
     return ind
 
 toolbox.register("mate", mate)
@@ -471,15 +484,13 @@ def main():
         
         # Apply crossover and mutation on the offspring
         for child1, child2 in zip(offspring[::2], offspring[1::2]):
-            if random.random() < 0.6:
+            if random.random() < 0.8:
                 toolbox.mate(child1, child2)
                 del child1.fitness.values
                 del child2.fitness.values
-        
         for mutant in offspring:
-            if random.random() < 0.3:
-                toolbox.mutate(mutant)
-                del mutant.fitness.values
+            toolbox.mutate(mutant) # the mutation probability is inside the mutate function 
+            del mutant.fitness.values
         
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]

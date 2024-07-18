@@ -5,7 +5,7 @@ class TSIDParameterTuning:
     def __init__(self, active_joint) -> None:
         self.CoM_Kp = 15.0
         self.CoM_Kd = 7.0
-        postural_Kp_temp = (np.array([130,80,20,60,130,80,20,60,150,20,20,180,140,20,150,20,20,180,140,20])* 2.8)  # TODO symmetry
+        postural_Kp_temp = (np.array([50,50,50,130,80,20,60,130,80,20,60,150,20,20,180,140,20,150,20,20,180,140,20])* 2.8)  # TODO symmetry
         self.postural_Kp = []
         self.active_joints = active_joint
         for idx,item in enumerate(active_joint):
