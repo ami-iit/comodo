@@ -400,6 +400,7 @@ class RobotModel(KinDynComputations):
         mujoco_el = ET.Element("mujoco")
         compiler_el = ET.Element("compiler")
         compiler_el.set("discardvisual", "false")
+        compiler_el.set("balanceinertia", "true")
         if not (meshes is None):
             compiler_el.set("meshdir", str(meshes))
         mujoco_el.append(compiler_el)

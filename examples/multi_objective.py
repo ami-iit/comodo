@@ -11,9 +11,9 @@ from include.dataBaseFitnessFunction import DatabaseFitnessFunction
 import copy
 
 joint_name_list = [
-    "torso_pitch",
-    "torso_roll",
-    "torso_yaw",
+    # "torso_pitch",
+    # "torso_roll",
+    # "torso_yaw",
     "r_shoulder_pitch",
     "r_shoulder_roll",
     "r_shoulder_yaw",
@@ -40,7 +40,7 @@ POPULATION_SIZE = 100
 GENERATIONS = 3000
 common_path = os.path.dirname(os.path.abspath(__file__))
 SAVE_PATH = common_path + "/result/"
-os.mkdir(SAVE_PATH)
+# os.mkdir(SAVE_PATH)
  
 chrom_generator = ChromosomeGenerator()
 link_names = ["root_link","upper_arm", "forearm","lower_leg","hip_3"]
@@ -66,7 +66,7 @@ chrom_generator.add_parameters(density_param)
 ## joint type 
 jointTypeCh = SubChromosome()
 jointTypeCh.type = NameChromosome.JOINT_TYPE
-jointTypeCh.dimension = 12
+jointTypeCh.dimension = 9
 jointTypeCh.isDiscrete = True 
 jointTypeCh.feasible_set = [0,1]
 chrom_generator.add_parameters(jointTypeCh)
@@ -145,16 +145,18 @@ import tempfile
 import urllib.request
 
 # Getting stickbot urdf file and convert it to string
-urdf_robot_file = tempfile.NamedTemporaryFile(mode="w+")
-url = "https://raw.githubusercontent.com/icub-tech-iit/ergocub-gazebo-simulations/master/models/stickBot/model.urdf"
-urllib.request.urlretrieve(url, urdf_robot_file.name)
+# urdf_robot_file = tempfile.NamedTemporaryFile(mode="w+")
+# url = "https://raw.githubusercontent.com/icub-tech-iit/ergocub-gazebo-simulations/master/models/stickBot/model.urdf"
+urdf_path = common_path + "/models/model.urdf"
+# urllib.request.urlretrieve(url, urdf_robot_file.name)
 # Load the URDF file
-tree = ET.parse(urdf_robot_file.name)
+# tree = ET.parse(urdf_robot_file.name)
+tree = ET.parse(urdf_path)
 root = tree.getroot()
 # Convert the XML tree to a string
 robot_urdf_string_original = ET.tostring(root)
 create_urdf_instance = createUrdf(
-    original_urdf_path=urdf_robot_file.name, save_gazebo_plugin=False
+    original_urdf_path=urdf_path, save_gazebo_plugin=False
 )
 # # Define parametric links and controlled joints
 # joint_name_list = [
@@ -197,7 +199,7 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
     weigth_time = 100
     torque_norm = []
     if(not(plan_trajectory.plan_trajectory())):
-        return 100*weigth_time*TIME_TH
+        return TIME_TH
        # Define simulator and set initial position
     mujoco_instance = MujocoSimulator()
     mujoco_instance.load_model(
@@ -223,7 +225,8 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
     )
     n_step = int(lifting_controller_instance.frequency/mujoco_instance.get_simulation_frequency())
 
-    while(t<TIME_TH):    
+    while(t<TIME_TH): 
+        print(t)   
         # Updating the states 
         s,ds,tau = mujoco_instance.get_state()
         t = mujoco_instance.get_simulation_time()
@@ -237,7 +240,9 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
         mujoco_instance.set_input(tau)
         mujoco_instance.step(int(n_step))
     # Closing visualization
-    fitness = 0.001*(np.mean(torque_norm))  + weigth_time*(TIME_TH + mujoco_instance.get_simulation_frequency()-t)
+    # fitness = 0.001*(np.mean(torque_norm))  + weigth_time*(TIME_TH + mujoco_instance.get_simulation_frequency()-t)
+    fitness =(TIME_TH + mujoco_instance.get_simulation_frequency()-t)
+    
     mujoco_instance.close_visualization()
     return fitness
 
@@ -253,7 +258,7 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
     solved, s_des, xyz_rpy, H_b = robot_model_init.compute_desired_position_walking()
     weigth_time= 100
     if(not(solved)):
-        return 100*weigth_time*TIME_TH
+        return TIME_TH
     # Define simulator and set initial position
     mujoco_instance = MujocoSimulator()
     mujoco_instance.load_model(
@@ -308,6 +313,7 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
     weigth_time= 100 
     # Simulation-control loop
     while t < TIME_TH:
+        print(t)
         # Reading robot state from simulator
         s, ds, tau = mujoco_instance.get_state()
         torque_norm.append(np.linalg.norm(tau))
@@ -362,7 +368,8 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
         if counter == n_step_mpc_tsid:
             counter = 0
             
-    fitness = 0.001*(np.mean(torque_norm))  + weigth_time*(TIME_TH + mujoco_instance.get_simulation_frequency()-t)
+    # fitness = 0.001*(np.mean(torque_norm))  + weigth_time*(TIME_TH + mujoco_instance.get_simulation_frequency()-t)
+    fitness = (TIME_TH + mujoco_instance.get_simulation_frequency()-t)
     # Closing visualization
     mujoco_instance.close_visualization()
     return fitness 
@@ -386,13 +393,20 @@ def evaluate(individual):
     Kv = []
     joint_active = []
     joint_arms = []
-    joint_active.extend(joint_active_temp[:3])
-    joint_arms.extend(joint_active_temp[3:6])
+    # joint_active.extend(joint_active_temp[:3])
+    # joint_arms.extend(joint_active_temp[3:6])
+    # joint_arms.extend([1]) # The elbow is always active 
+    # joint_active.extend(joint_arms)
+    # joint_active.extend(joint_arms)
+    # joint_active.extend(joint_active_temp[6:])
+    # joint_active.extend(joint_active_temp[6:])
+    #  joint_active.extend(joint_active_temp[:3])
+    joint_arms.extend(joint_active_temp[:3])
     joint_arms.extend([1]) # The elbow is always active 
     joint_active.extend(joint_arms)
     joint_active.extend(joint_arms)
-    joint_active.extend(joint_active_temp[6:])
-    joint_active.extend(joint_active_temp[6:])
+    joint_active.extend(joint_active_temp[3:])
+    joint_active.extend(joint_active_temp[3:])
     # motor_inertia_param = []
     # motor_inertia_param.extend(motor_inertia_param_temp[:4])
     # motor_inertia_param.extend(motor_inertia_param_temp[:4])
@@ -434,7 +448,6 @@ def evaluate(individual):
     mpc_p = dict_return[NameChromosome.MPC_PARAMETERS]
     tsid_p = dict_return[NameChromosome.TSID_PARAMTERES]
     lifting_p = dict_return[NameChromosome.PAYLOAD_LIFTING]
-    print("IMPORTANTEEE",mpc_p)
     metric2 = compute_fitness_walking(modifications,modifications_density, motors_param,joint_name_list_updated,joint_active, mpc_p, tsid_p)
     metric1 = compute_fitness_payload_lifting(modifications,modifications_density,motors_param,joint_name_list_updated,joint_active, lifting_p)
     return metric1, metric2
@@ -461,9 +474,10 @@ def mate(ind1, ind2):
     return ind1, ind2
 
 def mutate(ind):
-    for i in range(len(ind)):
-        if random.random() < 1/len(ind):
-            ind[i] = chrom_generator.generate_chromosome()[i]
+    ind = chrom_generator.generate_chromosome()
+    # for i in range(len(ind)):
+    #     if random.random() < 1/len(ind):
+    #         ind[i] = chrom_generator.generate_chromosome()[i]
     return ind
 
 toolbox.register("mate", mate)
@@ -484,13 +498,16 @@ def main():
         
         # Apply crossover and mutation on the offspring
         for child1, child2 in zip(offspring[::2], offspring[1::2]):
-            if random.random() < 0.8:
+            if random.random() < 0.6:
                 toolbox.mate(child1, child2)
                 del child1.fitness.values
                 del child2.fitness.values
         for mutant in offspring:
-            toolbox.mutate(mutant) # the mutation probability is inside the mutate function 
-            del mutant.fitness.values
+            if random.random() < 0.3:
+                toolbox.mutate(mutant)
+                del mutant.fitness.values
+            # toolbox.mutate(mutant) # the mutation probability is inside the mutate function 
+            # del mutant.fitness.values
         
         # Evaluate the individuals with an invalid fitness
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
@@ -520,10 +537,10 @@ def main():
     return population, all_generations
 
 if __name__ == "__main__":
-    final_population, all_generations = main()
-    all_gen = pickle.load( open("all_generations.pkl" , "rb" ) )
-    # final_population = pickle.load(open("result/generation80.p", "rb"))
-    final_population = all_gen[-1]
+    # final_population, all_generations = main()
+    # all_gen = pickle.load( open("all_generations.pkl" , "rb" ) )
+    final_population = pickle.load(open("result/generation436.p", "rb"))
+    # final_population = all_gen[-1]
     # Extract the Pareto front
     pareto_front = tools.ParetoFront()
     pareto_front.update(final_population)
@@ -535,7 +552,8 @@ if __name__ == "__main__":
     fitnesses = [ind.fitness.values for ind in pareto_front.items]
     fitness1 = [f[0] for f in fitnesses]
     fitness2 = [f[1] for f in fitnesses]
-    
+    # for item in pareto_front.items: 
+        # evaluate(item)
     plt.scatter(fitness1, fitness2, c='red', linewidths=10)
     plt.xlabel('Payload lifting', fontsize="40")
     plt.ylabel('Walking', fontsize="40")
