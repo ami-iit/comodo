@@ -56,9 +56,9 @@ chrom_generator.add_parameters(length_multiplier)
 density_param = SubChromosome()
 density_param.type = NameChromosome.DENSITY
 density_param.isDiscrete = True 
-density_param.feasible_set= [ 2129.2952964, 1199.07622408, 893.10763518, 626.60271872, 1661.68632652, 727.43130782, 600.50011475, 2222.0327914,]
+density_param.feasible_set= [ 2129.2952964, 1199.07622408, 893.10763518, 626.60271872, 1661.68632652, 727.43130782, 600.50011475, 2222.0327914,1064.6476482, 599.53811204, 446.55381759, 313.30135936, 830.84316326, 363.71565391, 300.250057375, 1111.0163957,4258.5905928, 2398.15244816, 1786.21527036, 1253.20543744, 3323.37265304, 1454.86261564, 1201.0002295, 4444.0655828]
 density_param.dimension = len(link_names)
-chrom_generator.add_parameters(density_param)
+# chrom_generator.add_parameters(density_param)
 
 ## joint type 
 jointTypeCh = SubChromosome()
@@ -69,20 +69,20 @@ jointTypeCh.feasible_set = [0,1]
 chrom_generator.add_parameters(jointTypeCh)
 
 ## motors inerita 
-# motors_inertia = SubChromosome()
-# motors_inertia.type = NameChromosome.MOTOR_INERTIA
-# motors_inertia.dimension = 10 # TODO find a way to automatically ensure symetry  
-# motors_inertia.isFloat = True 
-# motors_inertia.limits=[1e-5, 1e-1]
-# chrom_generator.add_parameters(motors_inertia)
+motors_inertia = SubChromosome()
+motors_inertia.type = NameChromosome.MOTOR_INERTIA
+motors_inertia.dimension = 10 # TODO find a way to automatically ensure symetry  
+motors_inertia.isFloat = True 
+motors_inertia.limits=[1e-10, 1e-1]
+chrom_generator.add_parameters(motors_inertia)
 
-# ## motors friction 
-# motors_friction = SubChromosome()
-# motors_friction.type = NameChromosome.MOTOR_FRICTION
-# motors_friction.dimension = 10 # TODO find a way to automatically ensure symetry  
-# motors_friction.isFloat = True 
-# motors_friction.limits=[0.001, 0.1]
-# chrom_generator.add_parameters(motors_friction)
+## motors friction 
+motors_friction = SubChromosome()
+motors_friction.type = NameChromosome.MOTOR_FRICTION
+motors_friction.dimension = 10 # TODO find a way to automatically ensure symetry  
+motors_friction.isFloat = True 
+motors_friction.limits=[1e-6, 0.1]
+chrom_generator.add_parameters(motors_friction)
 
 
 #**************************************************************CONTROL**************************************************************#
@@ -103,7 +103,7 @@ mpc_parameters.dimension = 7
 mpc_parameters.limits = np.array([[5,60],[20,100],[10,140],[10,140],[10,140],[10,140],[10,140],[10,140]])
 chrom_generator.add_parameters(mpc_parameters)
 
-
+## PAYLOAD LIFTING
 lifting_parameters = SubChromosome()
 lifting_parameters.type = NameChromosome.PAYLOAD_LIFTING
 lifting_parameters.isFloat = True
@@ -240,7 +240,7 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
      # Set loop variables
     TIME_TH = 20
     create_urdf_instance.modify_lengths(modifications_length)
-    create_urdf_instance.modify_densities(modifications_densities)
+    # create_urdf_instance.modify_densities(modifications_densities)
     urdf_robot_string = create_urdf_instance.write_urdf_to_file()
     create_urdf_instance.reset_modifications()
     robot_model_init = RobotModel(urdf_robot_string, "stickBot", joint_name_list_updated)
@@ -367,9 +367,10 @@ def evaluate(individual):
     links_length = dict_return[NameChromosome.LENGTH]
     # density = dict_return[NameChromosome.DENSITY]
     joint_active_temp = dict_return[NameChromosome.JOINT_TYPE]
-    joint_active_temp[3] = 1 # the elbow always active for now, if not there are issues in attaching the box to the hand in mujoco 
+    # joint_active_temp[3] = 1 # the elbow always active for now, if not there are issues in attaching the box to the hand in mujoco 
     # motor_inertia_param_temp = dict_return[0.8880754212296234, 1.2677991421185684, 0.5560596513676981, 0.869871841987746, 1.734054392727016, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1][NameChromosome.MOTOR_INERTIA]
-    # motor_friction_temp = dict_return[NameChromosome.MOTOR_FRICTION]
+    motor_friction_temp = dict_return[NameChromosome.MOTOR_FRICTION]
+    motor_inertia_temp = dict_return[NameChromosome.MOTOR_INERTIA]
     joint_name_list_updated =[]
     Im = []
     Kv = []
@@ -381,23 +382,23 @@ def evaluate(individual):
     joint_active.extend(joint_arms)
     joint_active.extend(joint_active_temp[3:])
     joint_active.extend(joint_active_temp[3:])
-    # motor_inertia_param = []
-    # motor_inertia_param.extend(motor_inertia_param_temp[:4])
-    # motor_inertia_param.extend(motor_inertia_param_temp[:4])
-    # motor_inertia_param.extend(motor_inertia_param_temp[4:])
-    # motor_inertia_param.extend(motor_inertia_param_temp[4:])
-    # motor_friction_param = []
-    # motor_friction_param.extend(motor_friction_temp[:4])
-    # motor_friction_param.extend(motor_friction_temp[:4])
-    # motor_friction_param.extend(motor_friction_temp[4:])
-    # motor_friction_param.extend(motor_friction_temp[4:])
+    motor_inertia_param = []
+    motor_inertia_param.extend(motor_inertia_temp[:4])
+    motor_inertia_param.extend(motor_inertia_temp[:4])
+    motor_inertia_param.extend(motor_inertia_temp[4:])
+    motor_inertia_param.extend(motor_inertia_temp[4:])
+    motor_friction_param = []
+    motor_friction_param.extend(motor_friction_temp[:4])
+    motor_friction_param.extend(motor_friction_temp[:4])
+    motor_friction_param.extend(motor_friction_temp[4:])
+    motor_friction_param.extend(motor_friction_temp[4:])
     
     # This is needed because not all joints will be active, and only the active one will have motor characteristics 
     for idx_joint in range(len(joint_active)):
         if(joint_active[idx_joint]== 1):
             joint_name_list_updated.append(joint_name_list[idx_joint])
-            # Im.append(motor_inertia_param[idx_joint])
-            # Kv.append(motor_friction_param[idx_joint])
+            Im.append(motor_inertia_param[idx_joint])
+            Kv.append(motor_friction_param[idx_joint])
 
 
     modifications = {}
@@ -417,12 +418,11 @@ def evaluate(individual):
     
 
     motors_param = {}
-    motors_param.update({"I_m": None})
-    motors_param.update({"k_v":None})
+    motors_param.update({"I_m": Im})
+    motors_param.update({"k_v":Kv})
     mpc_p = dict_return[NameChromosome.MPC_PARAMETERS]
     tsid_p = dict_return[NameChromosome.TSID_PARAMTERES]
     lifting_p = dict_return[NameChromosome.PAYLOAD_LIFTING]
-    print("IMPORTANTEEE",mpc_p)
     metric2 = compute_fitness_walking(modifications,modifications_density, motors_param,joint_name_list_updated,joint_active, mpc_p, tsid_p)
     metric1 = compute_fitness_payload_lifting(modifications,modifications_density,motors_param,joint_name_list_updated,joint_active, lifting_p)
     return metric1, metric2
