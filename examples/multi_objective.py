@@ -9,6 +9,7 @@ from concurrent.futures import ThreadPoolExecutor
 import os 
 from include.dataBaseFitnessFunction import DatabaseFitnessFunction
 import copy
+from matplotlib import cm  # Import color map
 
 joint_name_list = [
     "r_shoulder_pitch",
@@ -58,7 +59,7 @@ density_param.type = NameChromosome.DENSITY
 density_param.isDiscrete = True 
 density_param.feasible_set= [ 2129.2952964, 1199.07622408, 893.10763518, 626.60271872, 1661.68632652, 727.43130782, 600.50011475, 2222.0327914,1064.6476482, 599.53811204, 446.55381759, 313.30135936, 830.84316326, 363.71565391, 300.250057375, 1111.0163957,4258.5905928, 2398.15244816, 1786.21527036, 1253.20543744, 3323.37265304, 1454.86261564, 1201.0002295, 4444.0655828]
 density_param.dimension = len(link_names)
-# chrom_generator.add_parameters(density_param)
+chrom_generator.add_parameters(density_param)
 
 ## joint type 
 jointTypeCh = SubChromosome()
@@ -193,7 +194,7 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
     TIME_TH = 16
 
     if(not(plan_trajectory.plan_trajectory())):
-        return TIME_TH
+        return 250
        # Define simulator and set initial position
     mujoco_instance = MujocoSimulator()
     mujoco_instance.load_model(
@@ -217,36 +218,57 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
         joint_pos_1=plan_trajectory.s_opti[1], joint_pos_2=plan_trajectory.s_opti[2]
     )
     n_step = int(lifting_controller_instance.frequency/mujoco_instance.get_simulation_frequency())
-
-    while(t<TIME_TH):    
+    torque = []
+    state_machine_on = True
+    target_number_state = 5 
+    while(state_machine_on):    
         # Updating the states 
+        # print(t)
         s,ds,tau = mujoco_instance.get_state()
+        # print("tracking error", np.linalg.norm(s-plan_trajectory.s_opti[0]))
         t = mujoco_instance.get_simulation_time()
         lifting_controller_instance.set_state(s,ds,t)
-
+        torque.append(np.linalg.norm(tau))
         # Running the controller 
+        state_machine_on = lifting_controller_instance.update_desired_configuration()
         controller_succed= lifting_controller_instance.run()
-        if(not(controller_succed)): 
-            break
+        if(not(controller_succed)):
+            # fitness_pl = 10*(TIME_TH-t) + 0.1*np.mean(torque)
+            # return fitness_pl
+            break 
         tau = lifting_controller_instance.get_torque()
         mujoco_instance.set_input(tau)
         mujoco_instance.step(int(n_step))
     # Closing visualization
-    mujoco_instance.close_visualization()
-    return TIME_TH -t
+    current_state = lifting_controller_instance.state_machine.current_state
+    if(not(state_machine_on)):
+        current_state = lifting_controller_instance.state_machine.current_state +1
+    achieve_goal = target_number_state - current_state
+    torque_mean = np.mean(torque)
+    torque_diff = np.mean(np.diff(torque))
+    weight_achieve_goal = 30 
+    weight_torque_mean  = 0.5 
+    weight_torque_diff = 100 
+    # print("achieve goal", 30*achieve_goal)
+    # print("torque_mean", 0.5*torque_mean)
+    # print("torque_diff", 100*torque_diff)
+    # mujoco_instance.close_visualization()
+    fitness_pl = weight_achieve_goal*achieve_goal + weight_torque_mean*torque_mean + weight_torque_diff*torque_diff
+    return fitness_pl
 
 def compute_fitness_walking(modifications_length, modifications_densities, motors_param,joint_name_list_updated,joint_active, mpc_chr, tsid_chr):
     # Modify the robot model and initialize
      # Set loop variables
     TIME_TH = 20
     create_urdf_instance.modify_lengths(modifications_length)
-    # create_urdf_instance.modify_densities(modifications_densities)
+    create_urdf_instance.modify_densities(modifications_densities)
     urdf_robot_string = create_urdf_instance.write_urdf_to_file()
     create_urdf_instance.reset_modifications()
     robot_model_init = RobotModel(urdf_robot_string, "stickBot", joint_name_list_updated)
     solved, s_des, xyz_rpy, H_b = robot_model_init.compute_desired_position_walking()
     if(not(solved)):
-        return TIME_TH
+        fitness_wal = 200
+        return fitness_wal
     # Define simulator and set initial position
     mujoco_instance = MujocoSimulator()
     mujoco_instance.load_model(
@@ -296,17 +318,16 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
     n_step_mpc_tsid = int(mpc.get_frequency_seconds() / TSID_controller_instance.frequency)
     counter = 0
     mpc_success = True
-    energy_tot = 0.0
     succeded_controller = True
+    torque = []
     # Simulation-control loop
     while t < TIME_TH:
         # Reading robot state from simulator
         s, ds, tau = mujoco_instance.get_state()
-        energy_i = np.linalg.norm(tau)
         H_b = mujoco_instance.get_base()
         w_b = mujoco_instance.get_base_velocity()
         t = mujoco_instance.get_simulation_time()
-
+        torque.append(np.linalg.norm(tau))
         # Update TSID
         TSID_controller_instance.set_state_with_base(s=s, s_dot=ds, H_b=H_b, w_b=w_b, t=t)
 
@@ -318,7 +339,10 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
             mpc.contact_planner.advance_swing_foot_planner()
             if not (mpc_success):
                 print("MPC failed")
+                # fitness_wal = 10*(TIME_TH -t) + 0.1*np.mean(torque)
+                # return fitness_wal
                 break
+
 
         # Reading new references
         com, dcom, forces_left, forces_right, ang_mom = mpc.get_references()
@@ -341,6 +365,8 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
 
         if not (succeded_controller):
             print("Controller failed")
+            # fitness_wal = 10*(TIME_TH -t) + 0.1*np.mean(torque)
+            # return fitness_wal
             break
 
         tau = TSID_controller_instance.get_torque()
@@ -354,7 +380,18 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
             counter = 0
     # Closing visualization
     mujoco_instance.close_visualization()
-    return TIME_TH-t 
+    TSID_controller_instance.compute_com_position()
+    achieve_goal = abs(mpc.final_goal[0]-TSID_controller_instance.COM.toNumPy()[0])  # Walk until reference final position for the com 
+    torque_mean = np.mean(torque)
+    torque_diff = np.mean(np.diff(torque))
+    weight_achieve_goal = 150 
+    weight_torque_mean  = 0.05 
+    weight_torque_diff = 10 
+    # print("achieve goal", 150*achieve_goal)
+    # print("torque_mean", 0.05*torque_mean)
+    # print("torque_diff", 10*torque_diff)
+    fitness_wal = weight_achieve_goal*achieve_goal + weight_torque_diff*torque_diff + weight_torque_mean*torque_mean
+    return fitness_wal 
 
 def evaluate_from_database(individual):
     data_base = DatabaseFitnessFunction(SAVE_PATH + "database")
@@ -365,7 +402,7 @@ def evaluate(individual):
     # Define the robot modifications
     dict_return = chrom_generator.get_chromosome_dict(individual)
     links_length = dict_return[NameChromosome.LENGTH]
-    # density = dict_return[NameChromosome.DENSITY]
+    density = dict_return[NameChromosome.DENSITY]
     joint_active_temp = dict_return[NameChromosome.JOINT_TYPE]
     # joint_active_temp[3] = 1 # the elbow always active for now, if not there are issues in attaching the box to the hand in mujoco 
     # motor_inertia_param_temp = dict_return[0.8880754212296234, 1.2677991421185684, 0.5560596513676981, 0.869871841987746, 1.734054392727016, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1][NameChromosome.MOTOR_INERTIA]
@@ -406,15 +443,15 @@ def evaluate(individual):
     for idx,item in enumerate(link_names):
         if(item in torso_link):
             modifications.update({item: links_length[idx]})
-            # modifications_density.update({item:density[idx]})
+            modifications_density.update({item:density[idx]})
         else:    
             left_leg_item = "l_" + item
             right_leg_item = "r_" + item
             
             modifications.update({left_leg_item: links_length[idx]})
             modifications.update({right_leg_item: links_length[idx]})
-            # modifications_density.update({left_leg_item: density[idx]})
-            # modifications_density.update({right_leg_item: density[idx]})
+            modifications_density.update({left_leg_item: density[idx]})
+            modifications_density.update({right_leg_item: density[idx]})
     
 
     motors_param = {}
@@ -460,12 +497,17 @@ toolbox.register("select", tools.selNSGA2)
 def main():
     population = toolbox.population(n=POPULATION_SIZE)
     all_generations = []  # List to store all generations
-    
+    invalid_chromo = [chromo for chromo in population if not chromo.fitness.valid]
+    compute_fitness_list_chromosome(invalid_chromo)
+    fitnesses = toolbox.map(toolbox.evaluate, invalid_chromo)
+    for chromo, fit in zip(invalid_chromo, fitnesses):
+        chromo.fitness.values = fit
+    population = toolbox.select(population, POPULATION_SIZE)
+
     # Use the NSGA-II algorithm
     for gen in range(GENERATIONS):
         # Select the next generation individuals
-        offspring = toolbox.select(population, len(population))
-        
+        offspring = tools.selTournamentDCD(population, len(population))
         # Clone the selected individuals
         offspring = list(map(toolbox.clone, offspring))
         
@@ -490,7 +532,8 @@ def main():
             ind.fitness.values = fit
         
         # Replace the old population with the offspring
-        population[:] = offspring
+        population = toolbox.select(population + offspring, len(population))
+        # population[:] = offspring
         gen_temp = [toolbox.clone(ind) for ind in population]
         gen_path = SAVE_PATH+"/generation" + str(gen) + ".p"
 
@@ -511,27 +554,86 @@ def main():
 if __name__ == "__main__":
     final_population, all_generations = main()
     all_gen = pickle.load( open("all_generations.pkl" , "rb" ) )
-    # final_population = pickle.load(open("result/generation80.p", "rb"))
     final_population = all_gen[-1]
+
+    # path_pop = "result/generation1173.p"
+    # final_population = pickle.load(open(path_pop, "rb"))
     # Extract the Pareto front
-    pareto_front = tools.ParetoFront()
-    pareto_front.update(final_population)
+    # pareto_front = tools.ParetoFront()
+    # pareto_front.update(final_population)
 
     # Print the solutions in the Pareto front
-    for ind in final_population:
-        print(f"Individual: {ind}, Fitness: {ind.fitness.values}")
+    # for ind in pareto_front:
+    #     print(f"Individual: {ind}, Fitness: {ind.fitness.values}")
         # Plot the Pareto front
-    fitnesses = [ind.fitness.values for ind in pareto_front.items]
-    fitness1 = [f[0] for f in fitnesses]
-    fitness2 = [f[1] for f in fitnesses]
-    
-    plt.scatter(fitness1, fitness2, c='red', linewidths=10)
-    plt.xlabel('Payload lifting', fontsize="40")
-    plt.ylabel('Walking', fontsize="40")
-    plt.title('Pareto Front', fontsize="60")
-    plt.grid(True)
-    fig = plt.gcf()
-    fig.set_size_inches((21, 16), forward=False)
-    plt.savefig(SAVE_PATH + "Pareto.png")
+    # fitnesses = [ind.fitness.values for ind in pareto_front.items]
+    # fitness1 = [f[0] for f in fitnesses]
+    # fitness2 = [f[1] for f in fitnesses]
+    # # print("size pareto front", len(pareto_front))
+    # for item in pareto_front.items: 
+    #     evaluate(item)
+
+    ## PLOT ALL GENERATIONS 
+    # cmap = cm.Blues  # Use the 'Blues' colormap
+    # num_generations = 1150
+    # for i in range(num_generations):
+    #     plt.figure()
+    #     path_pop = "result/generation"+ str(i)+".p"
+    #     final_population = pickle.load(open(path_pop, "rb"))
+    #     # Extract the Pareto front
+    #     pareto_front = tools.ParetoFront()
+    #     pareto_front.update(final_population)
+
+    #     # Print the solutions in the Pareto front
+    #     # for ind in pareto_front:
+    #     #     print(f"Individual: {ind}, Fitness: {ind.fitness.values}")
+    #         # Plot the Pareto front
+    #     fitnesses = [ind.fitness.values for ind in pareto_front.items]
+    #     fitness1 = [f[0] for f in fitnesses]
+    #     fitness2 = [f[1] for f in fitnesses]
+    #     # print("size pareto front", len(pareto_front))
+    #     # for item in pareto_front.items: 
+    #     #     evaluate(item)
+    #     color = cmap(i / num_generations)  # Normalize index to [0, 1] range
+    #     plt.scatter(fitness1, fitness2, c=color, linewidths=5)        
+    #     # plt.plot(fitness1, fitness2, 'ro-')
+    #     # plt.xscale("log")
+    #     # plt.yscale("log")
+    #     print(i)
+    #     save_path_i = "Pareto"+str(i)+".png"
+    #     plt.xlabel('Payload lifting', fontsize="40")
+    #     plt.ylabel('Walking', fontsize="40")
+    #     plt.title('Pareto Front', fontsize="60")
+    #     plt.grid(True)
+    #     fig = plt.gcf()
+    #     print(i)
+    #     fig.set_size_inches((21, 16), forward=False)
+    #     plt.savefig(SAVE_PATH + save_path_i)
+    #     plt.close()
+    # # Step 1: Sort the population into Pareto fronts
+    # pareto_fronts = tools.sortNondominated(final_population, len(final_population))
+    # print("final populaton",len(final_population))
+    # # Step 2: Plot the Pareto fronts
+    # print('pareto front', len(pareto_fronts))
+    # for i, front in enumerate(pareto_fronts):
+    #     # Extract the objectives of individuals in this front
+    #     front_objs = [ind.fitness.values for ind in front]
+        
+    #     # Unzip to separate the objectives
+    #     front_x, front_y = zip(*front_objs)
+    #     plt.figure()
+    #     # Plot the front with different styles or colors
+    #     plt.scatter(front_x, front_y, label=f"Front {i+1}", marker='o')
+
+    # plt.title("Pareto Fronts")
+    # plt.xlabel("Objective 1")
+    # plt.ylabel("Objective 2")
+    # plt.legend()
+    # plt.grid(True)
+
+    # fig = plt.gcf()
+    # fig.set_size_inches((21, 16), forward=False)
+    # plt.savefig(SAVE_PATH + "ParetoFronts.png")
+    # plt.show()
     # plt.show()
 

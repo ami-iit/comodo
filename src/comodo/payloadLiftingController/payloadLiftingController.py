@@ -182,7 +182,7 @@ class PayloadLiftingController(Controller):
         super().set_state(s, s_dot, t)
 
     def update_desired_configuration(self):
-        self.state_machine.update(self.t)
+        updated = self.state_machine.update(self.t)
         (
             self.joint_pos_des,
             self.joint_vel_des,
@@ -223,10 +223,11 @@ class PayloadLiftingController(Controller):
         self.acc_com_des = self.model.get_center_of_mass_acceleration(
             w_dot_b_des, self.joint_acc_des
         )
+        return updated
 
     def run(self):
 
-        self.update_desired_configuration()
+        # updated = self.update_desired_configuration()
         self.postural_task_controller.set_desired_posture(
             self.joint_pos_des, self.joint_vel_des
         )
