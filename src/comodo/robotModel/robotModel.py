@@ -533,7 +533,7 @@ class RobotModel(KinDynComputations):
             new_inertial = ET.Element('inertial')
             new_inertial.set('pos', '0 0 0')
             new_inertial.set('quat', '0.0 0.0 0.0 1.0')
-            new_inertial.set('mass', '5')
+            new_inertial.set('mass', '15')
             new_inertial.set('diaginertia', '0.0833 0.0418 0.0418')
             new_body.append(new_inertial)
 

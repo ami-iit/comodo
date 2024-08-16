@@ -9,7 +9,10 @@ from concurrent.futures import ThreadPoolExecutor
 import os 
 from include.dataBaseFitnessFunction import DatabaseFitnessFunction
 import copy
-from matplotlib import cm  # Import color map
+from matplotlib import cm, colors  # Import color map
+
+import idyntree.bindings as iDynTree
+import time 
 
 joint_name_list = [
     "r_shoulder_pitch",
@@ -49,7 +52,7 @@ link_names = ["root_link","upper_arm", "forearm","lower_leg","hip_3"]
 length_multiplier = SubChromosome()
 length_multiplier.type = NameChromosome.LENGTH
 length_multiplier.isFloat = True
-length_multiplier.limits = [0.5,2.0]
+length_multiplier.limits = [0.5,2.5]
 length_multiplier.dimension = len(link_names)
 chrom_generator.add_parameters(length_multiplier)
 
@@ -101,7 +104,7 @@ mpc_parameters = SubChromosome()
 mpc_parameters.type = NameChromosome.MPC_PARAMETERS
 mpc_parameters.isFloat = True 
 mpc_parameters.dimension = 7
-mpc_parameters.limits = np.array([[5,60],[20,100],[10,140],[10,140],[10,140],[10,140],[10,140],[10,140]])
+mpc_parameters.limits = np.array([[5,100],[20,300],[10,340],[10,340],[10,340],[10,340],[10,340],[10,340]])
 chrom_generator.add_parameters(mpc_parameters)
 
 ## PAYLOAD LIFTING
@@ -143,16 +146,17 @@ import tempfile
 import urllib.request
 
 # Getting stickbot urdf file and convert it to string
-urdf_robot_file = tempfile.NamedTemporaryFile(mode="w+")
-url = "https://raw.githubusercontent.com/icub-tech-iit/ergocub-gazebo-simulations/master/models/stickBot/model.urdf"
-urllib.request.urlretrieve(url, urdf_robot_file.name)
+# urdf_robot_file = tempfile.NamedTemporaryFile(mode="w+")
+# url = "https://raw.githubusercontent.com/icub-tech-iit/ergocub-gazebo-simulations/master/models/stickBot/model.urdf"
+# urllib.request.urlretrieve(url, urdf_robot_file.name)
+urdf_robot_file_name = "/home/iit.local/csartore/software/multi_objective_optimization/comodo/examples/model.urdf"
 # Load the URDF file
-tree = ET.parse(urdf_robot_file.name)
+tree = ET.parse(urdf_robot_file_name)
 root = tree.getroot()
 # Convert the XML tree to a string
 robot_urdf_string_original = ET.tostring(root)
 create_urdf_instance = createUrdf(
-    original_urdf_path=urdf_robot_file.name, save_gazebo_plugin=False
+    original_urdf_path=urdf_robot_file_name, save_gazebo_plugin=False
 )
 # Define parametric links and controlled joints
 joint_name_list = [
@@ -249,10 +253,10 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
     weight_achieve_goal = 30 
     weight_torque_mean  = 0.5 
     weight_torque_diff = 100 
-    # print("achieve goal", 30*achieve_goal)
-    # print("torque_mean", 0.5*torque_mean)
-    # print("torque_diff", 100*torque_diff)
-    # mujoco_instance.close_visualization()
+    # print("achieve goal", achieve_goal)
+    # print("torque_mean", torque_mean)
+    # print("torque_diff", torque_diff)
+    mujoco_instance.close_visualization()
     fitness_pl = weight_achieve_goal*achieve_goal + weight_torque_mean*torque_mean + weight_torque_diff*torque_diff
     if(fitness_pl>250):
         fitness_pl = 250
@@ -261,7 +265,7 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
 def compute_fitness_walking(modifications_length, modifications_densities, motors_param,joint_name_list_updated,joint_active, mpc_chr, tsid_chr):
     # Modify the robot model and initialize
      # Set loop variables
-    TIME_TH = 20
+    TIME_TH = 15
     create_urdf_instance.modify_lengths(modifications_length)
     create_urdf_instance.modify_densities(modifications_densities)
     urdf_robot_string = create_urdf_instance.write_urdf_to_file()
@@ -324,6 +328,7 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
     torque = []
     # Simulation-control loop
     while t < TIME_TH:
+        # print(t)
         # Reading robot state from simulator
         s, ds, tau = mujoco_instance.get_state()
         H_b = mujoco_instance.get_base()
@@ -332,7 +337,8 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
         torque.append(np.linalg.norm(tau))
         # Update TSID
         TSID_controller_instance.set_state_with_base(s=s, s_dot=ds, H_b=H_b, w_b=w_b, t=t)
-
+        # TSID_controller_instance.compute_com_position()
+        # print(mpc.final_goal[0]-TSID_controller_instance.COM.toNumPy()[0])
         # MPC plan
         if counter == 0:
             mpc.set_state_with_base(s=s, s_dot=ds, H_b=H_b, w_b=w_b, t=t)
@@ -390,6 +396,10 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
     torque_diff = np.mean(np.diff(torque))
     error_norm =  np.linalg.norm(mpc.final_goal- TSID_controller_instance.COM.toNumPy())
     time_diff = TIME_TH-t
+    weight_achieve_goal = 150  
+    weight_torque_mean  = 0.5 
+    weight_torque_diff = 50 
+
     # print("achieve goal", achieve_goal)
     # print("torque_mean", torque_mean)
     # print("torque_diff", torque_diff)
@@ -472,6 +482,7 @@ def evaluate(individual):
     lifting_p = dict_return[NameChromosome.PAYLOAD_LIFTING]
     metric2 = compute_fitness_walking(modifications,modifications_density, motors_param,joint_name_list_updated,joint_active, mpc_p, tsid_p)
     metric1 = compute_fitness_payload_lifting(modifications,modifications_density,motors_param,joint_name_list_updated,joint_active, lifting_p)
+    # metric1 = 0 
     return metric1, metric2
 
 toolbox.register("evaluate", evaluate_from_database)
@@ -491,18 +502,18 @@ def compute_fitness_list_chromosome(list_chromosome):
 
 def mate(ind1, ind2):
     tools.cxTwoPoint(ind1, ind2)
-    ind1 = chrom_generator.check_chromosome_in_set(ind1)
-    ind2 = chrom_generator.check_chromosome_in_set(ind2)
+    # ind1 = chrom_generator.check_chromosome_in_set(ind1)
+    # ind2 = chrom_generator.check_chromosome_in_set(ind2)
     return ind1, ind2
 
 def mutate(ind):
     #TODO to be implemented in the chromosome generator 
     ind_new = chrom_generator.generate_chromosome()
     idx= random.randint(0, len(ind_new))
-    # if(random.random()>0.5):
-    ind[:idx] = ind_new[:idx]
-    # else:
-    #     ind[idx:] = ind_new[idx:]
+    if(random.random()>0.5):
+        ind[:idx] = ind_new[:idx]
+    else:
+         ind[idx:] = ind_new[idx:]
     return ind
 
 toolbox.register("mate", mate)
@@ -528,11 +539,11 @@ def main():
         
         # Apply crossover and mutation on the offspring
         for child1, child2 in zip(offspring[::2], offspring[1::2]):
-            if random.random() < 0.9:
-                toolbox.mate(child1, child2)
-                del child1.fitness.values
-                del child2.fitness.values
-        
+            
+            toolbox.mate(child1, child2)
+            del child1.fitness.values
+            del child2.fitness.values
+    
         for mutant in offspring:
             if random.random() < 0.6:
                 toolbox.mutate(mutant)
@@ -566,89 +577,464 @@ def main():
     
     return population, all_generations
 
+def print_main_hardware_charact(list_chromosome):
+    masses = []
+    heights = []
+    com_z_values = []
+    avg_motor_friction = []
+    avg_motor_inertia = []
+    active_joint_counts = []
+
+    item_idx = 0 
+    for item in list_chromosome:
+        item_idx += 1
+        # Define the robot modifications
+        dict_return = chrom_generator.get_chromosome_dict(item)
+        links_length = dict_return[NameChromosome.LENGTH]
+        density = dict_return[NameChromosome.DENSITY]
+        joint_active_temp = dict_return[NameChromosome.JOINT_TYPE]
+        motor_friction_temp = dict_return[NameChromosome.MOTOR_FRICTION]
+        motor_inertia_temp = dict_return[NameChromosome.MOTOR_INERTIA]
+        joint_name_list_updated =[]
+        Im = []
+        Kv = []
+        joint_active = []
+        joint_arms = []
+        joint_arms.extend(joint_active_temp[:3])
+        joint_arms.extend([1]) # The elbow is always active 
+        joint_active.extend(joint_arms)
+        joint_active.extend(joint_arms)
+        joint_active.extend(joint_active_temp[3:])
+        joint_active.extend(joint_active_temp[3:])
+        motor_inertia_param = []
+        motor_inertia_param.extend(motor_inertia_temp[:4])
+        motor_inertia_param.extend(motor_inertia_temp[:4])
+        motor_inertia_param.extend(motor_inertia_temp[4:])
+        motor_inertia_param.extend(motor_inertia_temp[4:])
+        motor_friction_param = []
+        motor_friction_param.extend(motor_friction_temp[:4])
+        motor_friction_param.extend(motor_friction_temp[:4])
+        motor_friction_param.extend(motor_friction_temp[4:])
+        motor_friction_param.extend(motor_friction_temp[4:])
+        
+        # This is needed because not all joints will be active, and only the active one will have motor characteristics 
+        for idx_joint in range(len(joint_active)):
+            if(joint_active[idx_joint] == 1):
+                joint_name_list_updated.append(joint_name_list[idx_joint])
+                Im.append(motor_inertia_param[idx_joint])
+                Kv.append(motor_friction_param[idx_joint])
+
+        modifications = {}
+        modifications_density = {}
+        for idx, item in enumerate(link_names):
+            if item in torso_link:
+                modifications.update({item: links_length[idx]})
+                modifications_density.update({item: density[idx]})
+            else:    
+                left_leg_item = "l_" + item
+                right_leg_item = "r_" + item
+                modifications.update({left_leg_item: links_length[idx]})
+                modifications.update({right_leg_item: links_length[idx]})
+                modifications_density.update({left_leg_item: density[idx]})
+                modifications_density.update({right_leg_item: density[idx]})        
+
+        motors_param = {}
+        motors_param.update({"I_m": Im})
+        motors_param.update({"k_v": Kv})
+
+        create_urdf_instance.modify_lengths(modifications)
+        create_urdf_instance.modify_densities(modifications_density)
+        urdf_robot_string = create_urdf_instance.write_urdf_to_file()
+        create_urdf_instance.reset_modifications()
+        robot_model_init = RobotModel(urdf_robot_string, "stickBot", joint_name_list_updated)
+        
+        root_link = "root_link"
+        left_foot_frame = "l_sole"
+        head = "head"
+        upper_arm_init = "l_shoulder_2"
+        elbow = "l_elbow_1"
+        fore_arm = "l_wrist_1"
+        upper_leg = "l_hip_2"
+        knee = "l_lower_leg"
+        ankle = "l_ankle_2"
+        torso_end = "neck_2"
+        distances_to_compute = {
+            "height": [head, left_foot_frame],
+            "total arm": [upper_arm_init, fore_arm],
+            "upper arm": [upper_arm_init, elbow],
+            "lower arm": [elbow, fore_arm],
+            "upper leg": [upper_leg, knee],
+            "lower_leg": [knee, ankle],
+            "torso": [upper_leg, torso_end],
+        }
+
+        joints = np.zeros(len(joint_name_list_updated))
+        w_H_torso = robot_model_init.forward_kinematics_fun(root_link)
+        w_H_leftFoot = robot_model_init.forward_kinematics_fun(left_foot_frame)
+
+        w_H_torso_num = np.array(w_H_torso(np.eye(4), joints))
+        w_H_lefFoot_num = np.array(w_H_leftFoot(np.eye(4), joints))
+        w_H_init = np.linalg.inv(w_H_lefFoot_num) @ w_H_torso_num
+
+        for key, value in distances_to_compute.items():
+            w_h_frame_1 = robot_model_init.forward_kinematics_fun(value[0])
+            w_h_frame_2 = robot_model_init.forward_kinematics_fun(value[1])
+            w_h_frame_1_val = np.array(w_h_frame_1(w_H_init, joints))
+            w_h_frame_2_val = np.array(w_h_frame_2(w_H_init, joints))
+            frame_1_h_frame_2 = np.linalg.inv(w_h_frame_1_val) @ w_h_frame_2_val
+            if key == "height":
+                height = frame_1_h_frame_2[2, 3]
+                heights.append(height)
+
+        mass = robot_model_init.get_total_mass()
+        masses.append(mass)
+        com_fun = robot_model_init.CoM_position_fun()
+        com_val = np.array(com_fun(w_H_init, joints))
+        com_z_values.append(com_val[2])  # z-component of CoM
+
+        avg_motor_friction.append(np.mean(Kv))
+        avg_motor_inertia.append(np.mean(Im))
+        active_joint_counts.append(len(joint_name_list_updated))
+
+        # print("TOTAL MASS", mass)
+        # print("CoM (z)", com_val[2]) 
+        # print("Joint active", joint_name_list_updated)
+
+
+    # Plotting Mass vs Height
+    plt.figure(figsize=(10, 6))
+    plt.scatter(masses, heights, color='blue', marker='o')
+    plt.title('Mass vs Height')
+    plt.xlabel('Mass (kg)')
+    plt.ylabel('Height (m)')
+    plt.grid(True)
+    plt.savefig(SAVE_PATH+'mass_vs_height.png')  # Save the plot
+    # plt.show()
+
+    # Plotting Center of Mass vs Total Mass
+    plt.figure(figsize=(10, 6))
+    plt.scatter(masses, com_z_values, color='green', marker='o')
+    plt.title('Center of Mass (Z) vs Total Mass')
+    plt.xlabel('Mass (kg)')
+    plt.ylabel('Center of Mass Z (m)')
+    plt.grid(True)
+    plt.savefig(SAVE_PATH+'com_vs_mass.png')  # Save the plot
+    # plt.show()
+
+    # Plotting Average Motor Friction vs Average Motor Inertia
+    plt.figure(figsize=(10, 6))
+    plt.scatter(avg_motor_friction, avg_motor_inertia, color='red', marker='o')
+    plt.title('Average Motor Friction vs Average Motor Inertia')
+    plt.xlabel('Average Motor Friction')
+    plt.ylabel('Average Motor Inertia')
+    plt.grid(True)
+    plt.savefig(SAVE_PATH+'friction_vs_inertia.png')  # Save the plot
+    # plt.show()
+
+    # Plotting Height vs Total Number of Active Joints
+    plt.figure(figsize=(10, 6))
+    plt.scatter(heights, active_joint_counts, color='purple', marker='o')
+    plt.title('Height vs Total Number of Active Joints')
+    plt.xlabel('Height (m)')
+    plt.ylabel('Total Number of Active Joints')
+    plt.grid(True)
+    plt.savefig(SAVE_PATH+'height_vs_active_joints.png')  # Save the plot
+    file_name_i = SAVE_PATH+str(item_idx)+".png"
+    visualize_model(urdf_robot_string,file_name_i)
+    # plt.show()
+
+def print_main_hardware_charact_old(list_chromosome):
+    item_idx = 0 
+    for item in list_chromosome:
+        item_idx=item_idx+1
+        # Define the robot modifications
+        dict_return = chrom_generator.get_chromosome_dict(item)
+        links_length = dict_return[NameChromosome.LENGTH]
+        density = dict_return[NameChromosome.DENSITY]
+        joint_active_temp = dict_return[NameChromosome.JOINT_TYPE]
+        motor_friction_temp = dict_return[NameChromosome.MOTOR_FRICTION]
+        motor_inertia_temp = dict_return[NameChromosome.MOTOR_INERTIA]
+        joint_name_list_updated =[]
+        Im = []
+        Kv = []
+        joint_active = []
+        joint_arms = []
+        joint_arms.extend(joint_active_temp[:3])
+        joint_arms.extend([1]) # The elbow is always active 
+        joint_active.extend(joint_arms)
+        joint_active.extend(joint_arms)
+        joint_active.extend(joint_active_temp[3:])
+        joint_active.extend(joint_active_temp[3:])
+        motor_inertia_param = []
+        motor_inertia_param.extend(motor_inertia_temp[:4])
+        motor_inertia_param.extend(motor_inertia_temp[:4])
+        motor_inertia_param.extend(motor_inertia_temp[4:])
+        motor_inertia_param.extend(motor_inertia_temp[4:])
+        motor_friction_param = []
+        motor_friction_param.extend(motor_friction_temp[:4])
+        motor_friction_param.extend(motor_friction_temp[:4])
+        motor_friction_param.extend(motor_friction_temp[4:])
+        motor_friction_param.extend(motor_friction_temp[4:])
+        
+        # This is needed because not all joints will be active, and only the active one will have motor characteristics 
+        for idx_joint in range(len(joint_active)):
+            if(joint_active[idx_joint]== 1):
+                joint_name_list_updated.append(joint_name_list[idx_joint])
+                Im.append(motor_inertia_param[idx_joint])
+                Kv.append(motor_friction_param[idx_joint])
+
+
+        modifications = {}
+        modifications_density = {}
+        for idx,item in enumerate(link_names):
+            if(item in torso_link):
+                modifications.update({item: links_length[idx]})
+                modifications_density.update({item:density[idx]})
+            else:    
+                left_leg_item = "l_" + item
+                right_leg_item = "r_" + item
+                
+                modifications.update({left_leg_item: links_length[idx]})
+                modifications.update({right_leg_item: links_length[idx]})
+                modifications_density.update({left_leg_item: density[idx]})
+                modifications_density.update({right_leg_item: density[idx]})        
+
+        motors_param = {}
+        motors_param.update({"I_m": Im})
+        motors_param.update({"k_v":Kv})
+
+        create_urdf_instance.modify_lengths(modifications)
+        create_urdf_instance.modify_densities(modifications_density)
+        urdf_robot_string = create_urdf_instance.write_urdf_to_file()
+        create_urdf_instance.reset_modifications()
+        robot_model_init = RobotModel(urdf_robot_string, "stickBot", joint_name_list_updated)
+        root_link = "root_link"
+        left_foot_frame = "l_sole"
+        head = "head"
+        upper_arm_init = "l_shoulder_2"
+        elbow = "l_elbow_1"
+        fore_arm = "l_wrist_1"
+        upper_leg = "l_hip_2"
+        knee = "l_lower_leg"
+        ankle = "l_ankle_2"
+        torso_end = "neck_2"
+        distances_to_compute = {
+            "heigth": [head, left_foot_frame],
+            "total arm": [upper_arm_init, fore_arm],
+            "upper arm": [upper_arm_init, elbow],
+            "lower arm": [elbow, fore_arm],
+            "upper leg": [upper_leg, knee],
+            "lower_leg": [knee, ankle],
+            "torso": [upper_leg, torso_end],
+        }
+
+        joints = np.zeros(len(joint_name_list_updated))
+        w_H_torso = robot_model_init.forward_kinematics_fun(root_link)
+        w_H_leftFoot = robot_model_init.forward_kinematics_fun(left_foot_frame)
+
+        w_H_torso_num = np.array(w_H_torso(np.eye(4), joints))
+        w_H_lefFoot_num = np.array(w_H_leftFoot(np.eye(4), joints))
+        w_H_init = np.linalg.inv(w_H_lefFoot_num) @ w_H_torso_num
+
+        for key, value in distances_to_compute.items():
+            print(key)
+            w_h_frame_1 = robot_model_init.forward_kinematics_fun(value[0])
+            w_h_frame_2 = robot_model_init.forward_kinematics_fun(value[1])
+            w_h_frame_1_val = np.array(w_h_frame_1(w_H_init, joints))
+            w_h_frame_2_val = np.array(w_h_frame_2(w_H_init, joints))
+
+            frame_1_h_frame_2 = np.linalg.inv(w_h_frame_1_val) @ w_h_frame_2_val
+            print(frame_1_h_frame_2[:3, 3])
+        mass = robot_model_init.get_total_mass()
+        com_fun = robot_model_init.CoM_position_fun()
+        com_val = np.array(com_fun(w_H_init, joints))
+        print("TOTAL MASS", mass)
+        print("com", com_val[2]) 
+        print("joint active", joint_name_list_updated)
+        file_name_i = SAVE_PATH+str(item_idx)+".png"
+        visualize_model(urdf_robot_string,file_name_i)
+
+def visualize_model(urdf_string_old, file_name):
+
+    ## Modify the urdf string to be all grey 
+    # Parse the URDF string
+    root = ET.fromstring(urdf_string_old)
+
+    # Define the new RGBA color
+    new_rgba = "0.5 0.5 0.5 1."
+
+    # Find all material elements and update their color
+    for material in root.findall('material'):
+        color = material.find('color')
+        if color is not None:
+            color.set('rgba', new_rgba)
+
+    # Convert the modified XML tree back to a string
+    urdf_string = ET.tostring(root, encoding='unicode')
+
+    viz = iDynTree.Visualizer()
+    vizOpt = iDynTree.VisualizerOptions()
+    vizOpt.winWidth = 1500
+    vizOpt.winHeight = 1500
+    if not viz.init(vizOpt):
+        raise Exception("Could not initialize iDynTree Visualizer")
+
+    env = viz.enviroment()
+    env.setElementVisibility("floor_grid",  False)
+    env.setElementVisibility("world_frame", False)
+    viz.setColorPalette("meshcat")
+    env.setElementVisibility("world_frame", False)
+    frames = viz.frames()
+    cam = viz.camera()
+    cam.setPosition(iDynTree.Position(3, 0, 1.2))
+    viz.camera().animator().enableMouseControl(True)
+
+    mdlLoader = iDynTree.ModelLoader()
+    mdlLoader.loadModelFromString(urdf_string)
+    viz.addModel(mdlLoader.model(), "model")
+    time_out_viz = 4
+    time_now = time.time()
+
+    time_now = time.time()
+    while(time.time()-time_now<time_out_viz and viz.run()): 
+        viz.draw()
+    viz.drawToFile(file_name)
+
 if __name__ == "__main__":
     final_population, all_generations = main()
     all_gen = pickle.load( open("all_generations.pkl" , "rb" ) )
     final_population = all_gen[-1]
+    analyse_output = False
 
-    # path_pop = "result/generation1173.p"
-    # final_population = pickle.load(open(path_pop, "rb"))
-    # Extract the Pareto front
-    # pareto_front = tools.ParetoFront()
-    # pareto_front.update(final_population)
+    if(analyse_output):
+        n_gen_tot = 271
 
-    # Print the solutions in the Pareto front
-    # for ind in pareto_front:
-    #     print(f"Individual: {ind}, Fitness: {ind.fitness.values}")
-        # Plot the Pareto front
-    # fitnesses = [ind.fitness.values for ind in pareto_front.items]
-    # fitness1 = [f[0] for f in fitnesses]
-    # fitness2 = [f[1] for f in fitnesses]
-    # # print("size pareto front", len(pareto_front))
-    # for item in pareto_front.items: 
-    #     evaluate(item)
+        # Create a subset of the 'Blues' colormap
+        cmap = cm.Blues 
+        cmap_subset = colors.LinearSegmentedColormap.from_list(
+            'Blues_subset', cmap(np.linspace(0.3, 1, 256))
+        )
 
-    ## PLOT ALL GENERATIONS 
-    # cmap = cm.Blues  # Use the 'Blues' colormap
-    # num_generations = 1150
-    # for i in range(num_generations):
-    #     plt.figure()
-    #     path_pop = "result/generation"+ str(i)+".p"
-    #     final_population = pickle.load(open(path_pop, "rb"))
-    #     # Extract the Pareto front
-    #     pareto_front = tools.ParetoFront()
-    #     pareto_front.update(final_population)
+        # Normalize the color map to the number of generations
+        norm = colors.Normalize(vmin=0, vmax=n_gen_tot)
 
-    #     # Print the solutions in the Pareto front
-    #     # for ind in pareto_front:
-    #     #     print(f"Individual: {ind}, Fitness: {ind.fitness.values}")
-    #         # Plot the Pareto front
-    #     fitnesses = [ind.fitness.values for ind in pareto_front.items]
-    #     fitness1 = [f[0] for f in fitnesses]
-    #     fitness2 = [f[1] for f in fitnesses]
-    #     # print("size pareto front", len(pareto_front))
-    #     # for item in pareto_front.items: 
-    #     #     evaluate(item)
-    #     color = cmap(i / num_generations)  # Normalize index to [0, 1] range
-    #     plt.scatter(fitness1, fitness2, c=color, linewidths=5)        
-    #     # plt.plot(fitness1, fitness2, 'ro-')
-    #     # plt.xscale("log")
-    #     # plt.yscale("log")
-    #     print(i)
-    #     save_path_i = "Pareto"+str(i)+".png"
-    #     plt.xlabel('Payload lifting', fontsize="40")
-    #     plt.ylabel('Walking', fontsize="40")
-    #     plt.title('Pareto Front', fontsize="60")
-    #     plt.grid(True)
-    #     fig = plt.gcf()
-    #     print(i)
-    #     fig.set_size_inches((21, 16), forward=False)
-    #     plt.savefig(SAVE_PATH + save_path_i)
-    #     plt.close()
-    # # Step 1: Sort the population into Pareto fronts
-    # pareto_fronts = tools.sortNondominated(final_population, len(final_population))
-    # print("final populaton",len(final_population))
-    # # Step 2: Plot the Pareto fronts
-    # print('pareto front', len(pareto_fronts))
-    # for i, front in enumerate(pareto_fronts):
-    #     # Extract the objectives of individuals in this front
-    #     front_objs = [ind.fitness.values for ind in front]
-        
-    #     # Unzip to separate the objectives
-    #     front_x, front_y = zip(*front_objs)
-    #     plt.figure()
-    #     # Plot the front with different styles or colors
-    #     plt.scatter(front_x, front_y, label=f"Front {i+1}", marker='o')
+        # Initialize the plot
+        fig, ax = plt.subplots()
 
-    # plt.title("Pareto Fronts")
-    # plt.xlabel("Objective 1")
-    # plt.ylabel("Objective 2")
-    # plt.legend()
-    # plt.grid(True)
+        for i in range(n_gen_tot):
 
-    # fig = plt.gcf()
-    # fig.set_size_inches((21, 16), forward=False)
-    # plt.savefig(SAVE_PATH + "ParetoFronts.png")
-    # plt.show()
-    # plt.show()
+            # Plot and evaluate single instance
+            path_pop = "result/generation" + str(i) + ".p"
+            final_population = pickle.load(open(path_pop, "rb"))
+            # Extract the Pareto front
+            pareto_front = tools.ParetoFront()
+            pareto_front.update(final_population)
+
+            # Print the solutions in the Pareto front
+            # for ind in pareto_front:
+            #     print(f"Individual: {ind}, Fitness: {ind.fitness.values}")
+                # Plot the Pareto front
+            fitnesses = [ind.fitness.values for ind in pareto_front.items]
+            fitness1 = [f[0] for f in fitnesses]
+            fitness2 = [f[1] for f in fitnesses]
+
+            color = cmap_subset(norm(i))  # Normalize index to [0, 1] range
+            ax.scatter(fitness1, fitness2, color=color, linewidths=5)       
+            # if(i == n_gen_tot - 1):
+                # ax.plot(fitness1, fitness2, color=color)
+
+        # Add the color bar
+        sm = plt.cm.ScalarMappable(cmap=cmap_subset, norm=norm)
+        sm.set_array([])  # Provide a dummy array
+        cbar = plt.colorbar(sm, ax=ax)  # Associate the colorbar with the correct axes
+        cbar.set_label('Generation', fontsize=20)
+
+        save_path_i = "Pareto_tot.png"
+        ax.set_xlabel('Payload lifting', fontsize=40)
+        ax.set_ylabel('Walking', fontsize=40)
+        ax.set_title('Pareto Front', fontsize=60)
+        # plt.yscale("log")
+        # plt.xscale("log")
+        ax.grid(True)
+        fig.set_size_inches((21, 16), forward=False)
+        plt.savefig(SAVE_PATH + save_path_i)
+        plt.close()
+
+        # Plot and evaluate single instance
+        path_pop = "result/generation" + str(n_gen_tot-1)+".p"
+        final_population = pickle.load(open(path_pop, "rb"))
+        # Extract the Pareto front
+        pareto_front = tools.ParetoFront()
+        pareto_front.update(final_population)
+
+        # Print the solutions in the Pareto front
+        for ind in pareto_front:
+            print(f"Individual: {ind}, Fitness: {ind.fitness.values}")
+            # evaluate(ind)
+            # Plot the Pareto front
+        fitnesses = [ind.fitness.values for ind in pareto_front.items]
+        fitness1 = [f[0] for f in fitnesses]
+        fitness2 = [f[1] for f in fitnesses]
+
+        color = cmap_subset(norm(n_gen_tot))  # Normalize index to [0, 1] range
+        plt.figure()
+        plt.scatter(fitness1, fitness2, color=color, linewidths=5)        
+        plt.plot(fitness1, fitness2, color=color)
+        # # plt.xscale("log")
+        # plt.yscale("log")
+        save_path_i = "Pareto"+str(2)+".png"
+        plt.xlabel('Payload lifting', fontsize="40")
+        plt.ylabel('Walking', fontsize="40")
+        plt.title('Pareto Front', fontsize="60")
+        plt.grid(True)
+        fig = plt.gcf()
+        fig.set_size_inches((21, 16), forward=False)
+        plt.savefig(SAVE_PATH + save_path_i)
+        plt.close()
+
+        # Create a subset of the 'Blues' colormap
+        cmap = cm.Blues 
+        cmap_subset = colors.LinearSegmentedColormap.from_list(
+            'Blues_subset', cmap(np.linspace(0.2, 1, 256))
+        )
+
+        # Load the population of the last generation
+        path_pop = "result/generation" + str(n_gen_tot - 1) + ".p"  # Adjust index for 0-based index
+        final_population = pickle.load(open(path_pop, "rb"))
+
+        # Sort the population into Pareto fronts
+        pareto_fronts = tools.sortNondominated(final_population, len(final_population), first_front_only=False)
+
+        # Initialize the plot
+        plt.figure()
+
+        # Loop through all Pareto fronts and plot them
+        for rank, front in enumerate(pareto_fronts):
+            # Get the fitness values of the individuals in the current Pareto front
+            fitnesses = [ind.fitness.values for ind in front]
+            fitness1 = [f[0] for f in fitnesses]
+            fitness2 = [f[1] for f in fitnesses]
+
+            # Determine the color for this Pareto front
+            color = cmap_subset(norm(rank))  # Normalize rank to [0, 1] range
+
+            # Plot the Pareto front
+            plt.scatter(fitness1, fitness2, color=color, label=f'Front {rank + 1}', linewidths=5)
+            plt.plot(fitness1, fitness2, color=color)
+
+        # Final plot settings
+        save_path_i = "Pareto_all_fronts_last_generation.png"
+        plt.xlabel('Payload lifting', fontsize=40)
+        plt.ylabel('Walking', fontsize=40)
+        plt.title('Pareto Fronts of Last Generation', fontsize=60)
+        plt.grid(True)
+        plt.legend(title="Pareto Fronts")
+
+        # Set figure size and save the plot
+        fig = plt.gcf()
+        fig.set_size_inches((21, 16), forward=False)
+        plt.savefig(SAVE_PATH + save_path_i)
+        plt.close()
+
+        print_main_hardware_charact(pareto_front)
 

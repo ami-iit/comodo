@@ -21,7 +21,7 @@ class TSIDController(Controller):
         self.joint_torques_variable_name = "joint_torques"
         self.max_number_contacts = 2
         self.number_fails = 0
-        self.MAX_NUMBER_FAILS = 4
+        self.MAX_NUMBER_FAILS = 0
         super().__init__(frequency, robot_model)
 
     def define_kyndyn(self):

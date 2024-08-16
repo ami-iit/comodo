@@ -50,15 +50,15 @@ class FootPositionPlanner:
         # Note we are using the default name and type i.e. full contact
         contact.pose = manif.SE3(position=leftPosition, quaternion=quaternion)
         contact.activation_time = timedelta(seconds=0.0)
-        contact.deactivation_time = timedelta(seconds=1.0 * self.scaling)
+        contact.deactivation_time = timedelta(seconds=1.0 * self.scaling) # 0.7 - 1.5
         contact.name = "contactLeft1"
         self.contact_list_left_foot.add_contact(contact)
 
         leftPosition[0] += float(self.step_length * self.scaling_pos)
         # print(leftPosition.shape)
         contact.pose = manif.SE3(position=leftPosition, quaternion=quaternion)
-        contact.activation_time = timedelta(seconds=2.0 * self.scaling)
-        contact.deactivation_time = timedelta(seconds=5.0 * self.scaling)
+        contact.activation_time = timedelta(seconds=2.0 * self.scaling) # 1.4- 3
+        contact.deactivation_time = timedelta(seconds=5.0 * self.scaling) # 3.5-7.5
         contact.name = "contactLeft2"
         self.contact_list_left_foot.add_contact(contact)
 
@@ -144,16 +144,16 @@ class FootPositionPlanner:
         rightPosition[0] += self.step_length * self.scaling_pos
         contact.pose = manif.SE3(position=rightPosition, quaternion=quaternion)
         contact.activation_time = timedelta(seconds=12.0 * self.scaling)
-        contact.deactivation_time = timedelta(seconds=15.0 * self.scaling)
+        contact.deactivation_time = timedelta(seconds=25.0 * self.scaling)
         contact.name = "contactRight4"
         self.contact_list_right_foot.add_contact(contact)
 
-        rightPosition[0] += self.step_length * self.scaling_pos
-        contact.pose = manif.SE3(position=rightPosition, quaternion=quaternion)
-        contact.activation_time = timedelta(seconds=16.0 * self.scaling)
-        contact.deactivation_time = timedelta(seconds=25.0 * self.scaling)
-        contact.name = "contactRight5"
-        self.contact_list_right_foot.add_contact(contact)
+        # rightPosition[0] += self.step_length * self.scaling_pos
+        # contact.pose = manif.SE3(position=rightPosition, quaternion=quaternion)
+        # contact.activation_time = timedelta(seconds=18.0 * self.scaling)
+        # contact.deactivation_time = timedelta(seconds=25.0 * self.scaling)
+        # contact.name = "contactRight5"
+        # self.contact_list_right_foot.add_contact(contact)
 
         # rightPosition[1] -= 0.01*self.scaling_pos_y
         # contact.pose = manif.SE3(position = rightPosition, quaternion = quaternion)

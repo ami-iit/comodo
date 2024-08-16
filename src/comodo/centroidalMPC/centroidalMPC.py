@@ -196,6 +196,7 @@ class CentroidalMPC(Planner):
         self.centroidal_mpc.set_reference_trajectory(com_traj, angular_mom_traj)
         self.centroidal_mpc.set_contact_phase_list(vector_phase_list)
         self.com_traj = com_traj
+        self.final_goal = com_traj[-1]
         self.angular_mom_trak = angular_mom_traj
 
     def update_contact_phase_list(self, next_planned_contacts):
