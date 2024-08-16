@@ -254,6 +254,8 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
     # print("torque_diff", 100*torque_diff)
     # mujoco_instance.close_visualization()
     fitness_pl = weight_achieve_goal*achieve_goal + weight_torque_mean*torque_mean + weight_torque_diff*torque_diff
+    if(fitness_pl>250):
+        fitness_pl = 250
     return fitness_pl
 
 def compute_fitness_walking(modifications_length, modifications_densities, motors_param,joint_name_list_updated,joint_active, mpc_chr, tsid_chr):
@@ -267,7 +269,7 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
     robot_model_init = RobotModel(urdf_robot_string, "stickBot", joint_name_list_updated)
     solved, s_des, xyz_rpy, H_b = robot_model_init.compute_desired_position_walking()
     if(not(solved)):
-        fitness_wal = 200
+        fitness_wal = 600
         return fitness_wal
     # Define simulator and set initial position
     mujoco_instance = MujocoSimulator()
@@ -382,15 +384,23 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
     mujoco_instance.close_visualization()
     TSID_controller_instance.compute_com_position()
     achieve_goal = abs(mpc.final_goal[0]-TSID_controller_instance.COM.toNumPy()[0])  # Walk until reference final position for the com 
+    if(succeded_controller):
+        achieve_goal = 0.0
     torque_mean = np.mean(torque)
     torque_diff = np.mean(np.diff(torque))
-    weight_achieve_goal = 150 
-    weight_torque_mean  = 0.05 
-    weight_torque_diff = 10 
-    # print("achieve goal", 150*achieve_goal)
-    # print("torque_mean", 0.05*torque_mean)
-    # print("torque_diff", 10*torque_diff)
-    fitness_wal = weight_achieve_goal*achieve_goal + weight_torque_diff*torque_diff + weight_torque_mean*torque_mean
+    error_norm =  np.linalg.norm(mpc.final_goal- TSID_controller_instance.COM.toNumPy())
+    time_diff = TIME_TH-t
+    # print("achieve goal", achieve_goal)
+    # print("torque_mean", torque_mean)
+    # print("torque_diff", torque_diff)
+    # print("final goal",mpc.final_goal)
+    # print("com measured", TSID_controller_instance.COM.toNumPy())
+    # print("error norm", error_norm)
+    # print("Time diffeence times error",weight_achieve_goal*time_diff*error_norm)
+    fitness_wal = weight_achieve_goal*time_diff*error_norm + weight_torque_diff*torque_diff + weight_torque_mean*torque_mean
+    # if(fitness_wal>200):
+    #     fitness_wal = 200
+    # print("fitness_walking",fitness_wal)
     return fitness_wal 
 
 def evaluate_from_database(individual):
@@ -487,7 +497,12 @@ def mate(ind1, ind2):
 
 def mutate(ind):
     #TODO to be implemented in the chromosome generator 
-    ind = chrom_generator.generate_chromosome()
+    ind_new = chrom_generator.generate_chromosome()
+    idx= random.randint(0, len(ind_new))
+    # if(random.random()>0.5):
+    ind[:idx] = ind_new[:idx]
+    # else:
+    #     ind[idx:] = ind_new[idx:]
     return ind
 
 toolbox.register("mate", mate)
@@ -513,13 +528,13 @@ def main():
         
         # Apply crossover and mutation on the offspring
         for child1, child2 in zip(offspring[::2], offspring[1::2]):
-            if random.random() < 0.6:
+            if random.random() < 0.9:
                 toolbox.mate(child1, child2)
                 del child1.fitness.values
                 del child2.fitness.values
         
         for mutant in offspring:
-            if random.random() < 0.3:
+            if random.random() < 0.6:
                 toolbox.mutate(mutant)
                 del mutant.fitness.values
         
