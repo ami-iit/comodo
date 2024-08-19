@@ -10,7 +10,6 @@ import os
 from include.dataBaseFitnessFunction import DatabaseFitnessFunction
 import copy
 from matplotlib import cm, colors  # Import color map
-
 import idyntree.bindings as iDynTree
 import time 
 
@@ -107,6 +106,14 @@ mpc_parameters.dimension = 7
 mpc_parameters.limits = np.array([[5,100],[20,300],[10,340],[10,340],[10,340],[10,340],[10,340],[10,340]])
 chrom_generator.add_parameters(mpc_parameters)
 
+## Parameter feet traj 
+velocity_feet_traj = SubChromosome()
+velocity_feet_traj.type = NameChromosome.TIME_TRAJ_FEET
+velocity_feet_traj.isFloat = True 
+velocity_feet_traj.dimension = 1 
+velocity_feet_traj.limits = [0.7,1.5]
+chrom_generator.add_parameters(velocity_feet_traj)
+
 ## PAYLOAD LIFTING
 lifting_parameters = SubChromosome()
 lifting_parameters.type = NameChromosome.PAYLOAD_LIFTING
@@ -114,6 +121,14 @@ lifting_parameters.isFloat = True
 lifting_parameters.dimension = 6
 lifting_parameters.limits = np.array([[0.5,10],[0.5,10],[0.01, 0.05],[0.01, 0.05],[20,100],[20,100]])
 chrom_generator.add_parameters(lifting_parameters)
+
+## Parameter
+traj_parmeter_payload = SubChromosome()
+traj_parmeter_payload.type = NameChromosome.TIME_TRAJ_PAYLOAD
+traj_parmeter_payload.isDiscrete = True
+traj_parmeter_payload.dimension = 1 
+traj_parmeter_payload.feasible_set = [x * 0.5 for x in range(2, 11)]
+chrom_generator.add_parameters(traj_parmeter_payload)
 
 # Define a fitness class with weights (-1.0, -1.0) for minimization problems
 creator.create("FitnessMulti", base.Fitness, weights=(-1.0, -1.0))
@@ -185,7 +200,7 @@ torso_link = ['root_link', 'torso_1', 'torso_2', 'chest']
 
 ## This will be to be better organize
 
-def compute_fitness_payload_lifting(modifications_length, modifications_densities,motors_param,joint_name_list_updated,joint_active, lifting_ch): 
+def compute_fitness_payload_lifting(modifications_length, modifications_densities,motors_param,joint_name_list_updated,joint_active, lifting_ch, time_lifting = 5 ): 
     # Modify the robot model and initialize
     create_urdf_instance.modify_lengths(modifications_length)
     create_urdf_instance.modify_densities(modifications_densities)
@@ -195,7 +210,7 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
     robot_model_init.set_with_box(True)
     ## Planning the ergonomic trajectory for payload lifting 
     plan_trajectory = PlanErgonomyTrajectory(robot_model=robot_model_init)
-    TIME_TH = 16
+    TIME_TH = 3*time_lifting
 
     if(not(plan_trajectory.plan_trajectory())):
         return 250
@@ -217,7 +232,7 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
     lifting_controller_instance.set_control_gains(
         param_lifting_controller
     )
-    lifting_controller_instance.set_time_interval_state_machine(1, 5, 5)
+    lifting_controller_instance.set_time_interval_state_machine(1, time_lifting, time_lifting)
     lifting_controller_instance.initialize_state_machine(
         joint_pos_1=plan_trajectory.s_opti[1], joint_pos_2=plan_trajectory.s_opti[2]
     )
@@ -227,8 +242,11 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
     target_number_state = 5 
     while(state_machine_on):    
         # Updating the states 
-        # print(t)
+        print(time_lifting)
+        print(t)
         s,ds,tau = mujoco_instance.get_state()
+        H_b_muj_temp = mujoco_instance.get_base()
+        print("base pose", H_b_muj_temp[:3,3])
         # print("tracking error", np.linalg.norm(s-plan_trajectory.s_opti[0]))
         t = mujoco_instance.get_simulation_time()
         lifting_controller_instance.set_state(s,ds,t)
@@ -253,19 +271,21 @@ def compute_fitness_payload_lifting(modifications_length, modifications_densitie
     weight_achieve_goal = 30 
     weight_torque_mean  = 0.5 
     weight_torque_diff = 100 
-    # print("achieve goal", achieve_goal)
-    # print("torque_mean", torque_mean)
-    # print("torque_diff", torque_diff)
+    weight_time_traj = 10 
+    # print("achieve goal", weight_achieve_goal*achieve_goal)
+    # print("torque_mean", weight_torque_mean*torque_mean)
+    # print("torque_diff", weight_torque_diff*torque_diff)
     mujoco_instance.close_visualization()
-    fitness_pl = weight_achieve_goal*achieve_goal + weight_torque_mean*torque_mean + weight_torque_diff*torque_diff
+    fitness_pl = weight_achieve_goal*achieve_goal + weight_torque_mean*torque_mean + weight_torque_diff*torque_diff + weight_time_traj*time_lifting
     if(fitness_pl>250):
         fitness_pl = 250
+    # print("payload fitness", fitness_pl)
     return fitness_pl
 
-def compute_fitness_walking(modifications_length, modifications_densities, motors_param,joint_name_list_updated,joint_active, mpc_chr, tsid_chr):
+def compute_fitness_walking(modifications_length, modifications_densities, motors_param,joint_name_list_updated,joint_active, mpc_chr, tsid_chr, time_traj = 1):
     # Modify the robot model and initialize
      # Set loop variables
-    TIME_TH = 15
+    TIME_TH = 15*time_traj
     create_urdf_instance.modify_lengths(modifications_length)
     create_urdf_instance.modify_densities(modifications_densities)
     urdf_robot_string = create_urdf_instance.write_urdf_to_file()
@@ -297,7 +317,7 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
     TSID_controller_instance.set_state_with_base(s, ds, H_b, w_b, t)
     # MPC Instance
     step_lenght = 0.1
-    mpc = CentroidalMPC(robot_model=robot_model_init, step_length=step_lenght)
+    mpc = CentroidalMPC(robot_model=robot_model_init, step_length=step_lenght, frequency_ms=100, scaling=time_traj)
     mpc.intialize_mpc(mpc_parameters=mpc_parameters)
     # Set desired quantities
     mpc.configure(s_init=s_des, H_b_init=H_b)
@@ -326,15 +346,18 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
     mpc_success = True
     succeded_controller = True
     torque = []
+    base_velocity = []
     # Simulation-control loop
     while t < TIME_TH:
         # print(t)
+        # print(TIME_TH)
         # Reading robot state from simulator
         s, ds, tau = mujoco_instance.get_state()
         H_b = mujoco_instance.get_base()
         w_b = mujoco_instance.get_base_velocity()
         t = mujoco_instance.get_simulation_time()
         torque.append(np.linalg.norm(tau))
+        base_velocity.append(np.linalg.norm(w_b[:3]))
         # Update TSID
         TSID_controller_instance.set_state_with_base(s=s, s_dot=ds, H_b=H_b, w_b=w_b, t=t)
         # TSID_controller_instance.compute_com_position()
@@ -399,15 +422,19 @@ def compute_fitness_walking(modifications_length, modifications_densities, motor
     weight_achieve_goal = 150  
     weight_torque_mean  = 0.5 
     weight_torque_diff = 50 
+    weight_time = 10
 
-    # print("achieve goal", achieve_goal)
-    # print("torque_mean", torque_mean)
-    # print("torque_diff", torque_diff)
+    # print("achieve goal", weight_achieve_goal*achieve_goal)
+    # print("torque_mean", weight_torque_mean*torque_mean)
+    # print("torque_diff", weight_torque_diff*torque_diff)
     # print("final goal",mpc.final_goal)
     # print("com measured", TSID_controller_instance.COM.toNumPy())
     # print("error norm", error_norm)
     # print("Time diffeence times error",weight_achieve_goal*time_diff*error_norm)
-    fitness_wal = weight_achieve_goal*time_diff*error_norm + weight_torque_diff*torque_diff + weight_torque_mean*torque_mean
+    # print("mean base velocity", np.mean(base_velocity))
+    # print("mean torque", np.mean(torque_mean))
+    # print("mean torque diff", np.mean(torque_diff))
+    fitness_wal = weight_achieve_goal*time_diff*error_norm + weight_torque_diff*torque_diff + weight_torque_mean*torque_mean +weight_time*time_traj
     # if(fitness_wal>200):
     #     fitness_wal = 200
     # print("fitness_walking",fitness_wal)
@@ -480,9 +507,13 @@ def evaluate(individual):
     mpc_p = dict_return[NameChromosome.MPC_PARAMETERS]
     tsid_p = dict_return[NameChromosome.TSID_PARAMTERES]
     lifting_p = dict_return[NameChromosome.PAYLOAD_LIFTING]
-    metric2 = compute_fitness_walking(modifications,modifications_density, motors_param,joint_name_list_updated,joint_active, mpc_p, tsid_p)
-    metric1 = compute_fitness_payload_lifting(modifications,modifications_density,motors_param,joint_name_list_updated,joint_active, lifting_p)
-    # metric1 = 0 
+    time_traj_mpc = dict_return[NameChromosome.TIME_TRAJ_FEET]
+    time_traj_payload = dict_return[NameChromosome.TIME_TRAJ_PAYLOAD]
+    # time_traj_mpc = 1.0
+    # time_traj_payload = 5.0
+    metric2 = compute_fitness_walking(modifications,modifications_density, motors_param,joint_name_list_updated,joint_active, mpc_p, tsid_p, time_traj_mpc[0])
+    metric1 = compute_fitness_payload_lifting(modifications,modifications_density,motors_param,joint_name_list_updated,joint_active, lifting_p,time_traj_payload[0])
+    # metric2 = 0 
     return metric1, metric2
 
 toolbox.register("evaluate", evaluate_from_database)
@@ -577,15 +608,18 @@ def main():
     
     return population, all_generations
 
-def print_main_hardware_charact(list_chromosome):
+def print_main_hardware_charact(list_chromosome, colors_plot,legends_to_plot, idx_special,linewidths_plot):
     masses = []
     heights = []
     com_z_values = []
     avg_motor_friction = []
     avg_motor_inertia = []
     active_joint_counts = []
-
+    inertia_vectors = []
+    friction_vectors = []
     item_idx = 0 
+    time_traj_mpc_tot = []
+    time_traj_payload_tot = []
     for item in list_chromosome:
         item_idx += 1
         # Define the robot modifications
@@ -595,6 +629,10 @@ def print_main_hardware_charact(list_chromosome):
         joint_active_temp = dict_return[NameChromosome.JOINT_TYPE]
         motor_friction_temp = dict_return[NameChromosome.MOTOR_FRICTION]
         motor_inertia_temp = dict_return[NameChromosome.MOTOR_INERTIA]
+        time_traj_mpc = dict_return[NameChromosome.TIME_TRAJ_FEET]
+        time_traj_payload = dict_return[NameChromosome.TIME_TRAJ_PAYLOAD]
+        time_traj_mpc_tot.extend(time_traj_mpc)
+        time_traj_payload_tot.extend(time_traj_payload)
         joint_name_list_updated =[]
         Im = []
         Kv = []
@@ -684,7 +722,7 @@ def print_main_hardware_charact(list_chromosome):
             frame_1_h_frame_2 = np.linalg.inv(w_h_frame_1_val) @ w_h_frame_2_val
             if key == "height":
                 height = frame_1_h_frame_2[2, 3]
-                heights.append(height)
+                heights.append(-height)
 
         mass = robot_model_init.get_total_mass()
         masses.append(mass)
@@ -695,6 +733,11 @@ def print_main_hardware_charact(list_chromosome):
         avg_motor_friction.append(np.mean(Kv))
         avg_motor_inertia.append(np.mean(Im))
         active_joint_counts.append(len(joint_name_list_updated))
+        I_m_no_sym = Im[:3] + Im[12:]
+        Kv_no_sym = Kv[:3] + Kv[12:]
+        inertia_vectors.append(I_m_no_sym)
+        friction_vectors.append(Kv_no_sym)
+
 
         # print("TOTAL MASS", mass)
         # print("CoM (z)", com_val[2]) 
@@ -702,46 +745,212 @@ def print_main_hardware_charact(list_chromosome):
 
 
     # Plotting Mass vs Height
-    plt.figure(figsize=(10, 6))
-    plt.scatter(masses, heights, color='blue', marker='o')
-    plt.title('Mass vs Height')
-    plt.xlabel('Mass (kg)')
-    plt.ylabel('Height (m)')
-    plt.grid(True)
-    plt.savefig(SAVE_PATH+'mass_vs_height.png')  # Save the plot
-    # plt.show()
+    plt.figure(figsize=(21, 16))
+    positioning_legend = ['right' for i in range(len(list_chromosome))]
+    positioning_legend[idx_special[0]] = 'center'
+    positioning_legend[idx_special[1]] = 'left'
+    positioning_legend[idx_special[2]] = 'center' 
+    delta_to_add = [0.0 for i in range(len(list_chromosome))]
+    delta_to_add[idx_special[0]] = -0.043
+    delta_to_add[idx_special[1]] = 0.003
+    delta_to_add[idx_special[2]] = 0.003
+    delta_to_add = [0.0 for i in range(len(list_chromosome))]
+    delta_to_add[idx_special[0]] = -0.004
+    delta_to_add[idx_special[1]] = 0.003
+    delta_to_add[idx_special[2]] = 0.003
+    # positioning_legend = ['right','left','left']
 
-    # Plotting Center of Mass vs Total Mass
-    plt.figure(figsize=(10, 6))
-    plt.scatter(masses, com_z_values, color='green', marker='o')
-    plt.title('Center of Mass (Z) vs Total Mass')
-    plt.xlabel('Mass (kg)')
-    plt.ylabel('Center of Mass Z (m)')
+    # Assuming masses and heights are numpy arrays
+    masses = np.array(masses)
+    heights = np.array(heights)
+    com_z_values = np.array(com_z_values)
+
+    for idx in range(len(list_chromosome)):
+        plt.scatter(masses[idx], heights[idx], color=colors_plot[idx], marker='o', linewidths=linewidths_plot[idx])
+        plt.text(masses[idx] + 0.003* masses[idx], heights[idx] + delta_to_add[idx] * heights[idx], legends_to_plot[idx], fontsize=linewidths_plot[idx], ha=positioning_legend[idx])
+
+    # Setting only 3 ticks for x and y axes with formatted labels
+    x_ticks = np.linspace(masses.min()-0.4, masses.max() + 0.5, 4)
+    y_ticks = np.linspace(heights.min(), heights.max()+0.01, 4)
+
+    plt.xticks(x_ticks, [f'{tick:.2f}' for tick in x_ticks], fontsize=40, weight='bold')
+    plt.yticks(y_ticks, [f'{tick:.2f}' for tick in y_ticks], fontsize=40, weight='bold')
+
+    plt.title('Mass vs Height', fontsize=60)
+    plt.xlabel('Mass [kg]', fontsize=60)
+    plt.ylabel('Height [m]', fontsize=60)
     plt.grid(True)
-    plt.savefig(SAVE_PATH+'com_vs_mass.png')  # Save the plot
+
+    # Save the plot
+    plt.savefig(SAVE_PATH+'mass_vs_height.png')
+
+    # Plotting Center of Mass vs height
+    plt.figure(figsize=(21, 16))
+    positioning_legend = ['right' for i in range(len(list_chromosome))]
+    positioning_legend[idx_special[0]] = 'right'
+    positioning_legend[idx_special[1]] = 'left'
+    positioning_legend[idx_special[2]] = 'left'
+    delta_to_add = [0.0 for i in range(len(list_chromosome))]
+    delta_to_add[idx_special[0]] = 0.003
+    delta_to_add[idx_special[1]] = -0.001
+    delta_to_add[idx_special[2]] = 0.0
+    # delta_to_add=[0.003,-0.001,0.00]
+    for idx in range(len(list_chromosome)):
+        plt.scatter(heights[idx], com_z_values[idx], color=colors_plot[idx], marker='o',linewidths=linewidths_plot[idx])
+        plt.text(heights[idx] + 0.001*heights[idx], com_z_values[idx]+delta_to_add[idx]*com_z_values[idx], legends_to_plot[idx], fontsize=40, ha=positioning_legend[idx])
+    plt.title('Center of Mass (Z) vs Height', fontsize=60)
+    plt.xlabel('Height [m]', fontsize=60)
+    plt.ylabel('Center of Mass Z [m]', fontsize=60)
+    
+    # Setting only 3 ticks for x and y axes with formatted labels
+    x_ticks = np.linspace(heights.min(), heights.max(), 4)
+    y_ticks = np.linspace(com_z_values.min(), com_z_values.max()+0.01, 4)
+
+    plt.xticks(x_ticks, [f'{tick:.2f}' for tick in x_ticks], fontsize=40, weight='bold')
+    plt.yticks(y_ticks, [f'{tick:.2f}' for tick in y_ticks], fontsize=40, weight='bold')
+
+    plt.grid(True)
+    plt.savefig(SAVE_PATH+'com_vs_height.png')  # Save the plot
     # plt.show()
 
     # Plotting Average Motor Friction vs Average Motor Inertia
-    plt.figure(figsize=(10, 6))
-    plt.scatter(avg_motor_friction, avg_motor_inertia, color='red', marker='o')
-    plt.title('Average Motor Friction vs Average Motor Inertia')
-    plt.xlabel('Average Motor Friction')
-    plt.ylabel('Average Motor Inertia')
-    plt.grid(True)
-    plt.savefig(SAVE_PATH+'friction_vs_inertia.png')  # Save the plot
-    # plt.show()
+    # plt.figure(figsize=(10, 6))
+    # positioning_legend = ["center", "right", "right"]
+    # new_write = ["optimal walking and payload", "compromise", ""]
+    # delta_to_add = [-0.005, 0.005, -0.005]
+    # for idx in range(len(list_chromosome)):
+    #     plt.scatter(avg_motor_friction[idx], avg_motor_inertia[idx], color=colors_plot[idx], marker='o',linewidths=8)
+    #     plt.text(avg_motor_friction[idx]+0.005*avg_motor_friction[idx], avg_motor_inertia[idx]+delta_to_add[idx]*avg_motor_inertia[idx], new_write[idx], fontsize=12, ha=positioning_legend[idx])
+    # plt.title('Average Motor Friction vs Average Motor Inertia')
+    # plt.xlabel('Average Motor Friction')
+    # plt.ylabel('Average Motor Inertia')
+    # plt.grid(True)
+    # plt.savefig(SAVE_PATH+'friction_vs_inertia.png')  # Save the plot
+    # # plt.show()
 
-    # Plotting Height vs Total Number of Active Joints
-    plt.figure(figsize=(10, 6))
-    plt.scatter(heights, active_joint_counts, color='purple', marker='o')
-    plt.title('Height vs Total Number of Active Joints')
-    plt.xlabel('Height (m)')
-    plt.ylabel('Total Number of Active Joints')
-    plt.grid(True)
-    plt.savefig(SAVE_PATH+'height_vs_active_joints.png')  # Save the plot
-    file_name_i = SAVE_PATH+str(item_idx)+".png"
-    visualize_model(urdf_robot_string,file_name_i)
-    # plt.show()
+    # # Plotting Height vs Total Number of Active Joints
+    # plt.figure(figsize=(10, 6))
+    # for idx in range(len(list_chromosome)):
+    #     plt.scatter(heights[idx], active_joint_counts[idx], color=colors_plot[idx], marker='o')
+    #     plt.text(heights[idx], active_joint_counts[idx], legends_to_plot[idx], fontsize=12, ha='right')
+    # plt.title('Height vs Total Number of Active Joints',)
+    # plt.xlabel('Height (m)')
+    # plt.ylabel('Total Number of Active Joints')
+    # plt.grid(True)
+    # plt.savefig(SAVE_PATH+'height_vs_active_joints.png')  # Save the plot
+    # file_name_i = SAVE_PATH+str(item_idx)+".png"
+    # # visualize_model(urdf_robot_string,file_name_i)
+    # # plt.show()
+    # # Create a color map
+
+    joint_name_list_plot = [
+        "shoulder pitch",
+        "shoulder roll",
+        "elbow",
+        "hip pitch",
+        "hip roll",
+        "hip yaw",
+        "knee",
+        "ankle pitch",
+        "ankle roll",
+    ]
+    def normalize(vector):
+         return (vector - np.min(vector)) / (np.max(vector) - np.min(vector))
+
+
+    # Combine normalized vectors into a list
+    inertia_norm = [normalize(inertia_vectors[0])]# for vector_i in inertia_vectors]
+    nomrs_value_inertia = [np.linalg.norm(inertia_vectors[0])]# for vector_i in inertia_vectors]
+
+    cmap = plt.cm.Greens
+    cmap_subset = colors.LinearSegmentedColormap.from_list(
+        'Blues_subset', cmap(np.linspace(0.3, 0.9, 256))
+    )
+
+    norm = plt.Normalize(vmin=0, vmax=1)
+    # Define bar positions
+    bar_width = 0.02
+    positions = np.arange(len(inertia_vectors[0]))
+    plt.figure(figsize=(21, 16))
+    # Plotting
+    for i, vector in enumerate(inertia_norm):
+        cumulative_height = 0
+        idx = 0
+        for j, value in enumerate(vector):
+            plt.bar(positions[i] + i * bar_width, 1, bottom=cumulative_height,
+                    width=bar_width, color=cmap_subset(norm(value)))
+            
+            plt.text(positions[i] - bar_width+ 0.003, cumulative_height + 0.3,joint_name_list_plot[idx],
+                ha='right', va='bottom', fontsize=40)
+            idx +=1
+    
+            cumulative_height += 1  # Each element has the same size (1 unit height)
+                # Place the norm value on top of each column
+        # plt.text(positions[i] - i * bar_width, cumulative_height + 0.1, f'Norm: {nomrs_value_inertia[i]:.2f}',
+        #         ha='center', va='bottom', fontsize=40,color='grey')
+
+    y_thick = [positions[i] + i * bar_width for i in range(3)]
+    # Customizing the plot
+    # plt.yticks(positions + bar_width, joint_name_list_plot, fontsize=40, weight='bold')
+    plt.xticks([],[])
+    plt.yticks([],[])
+    plt.xlim([-0.05,0.05])
+    # Add color bar
+    sm = plt.cm.ScalarMappable(cmap=cmap_subset, norm=norm)
+    sm.set_array([])  # Only needed to add the colorbar
+    cbar=plt.colorbar(sm, ax=plt.gca(), label='')
+    cbar.ax.tick_params(labelsize=30)  
+    plt.title('Distribution motor inertia [Kgm^2]', fontsize=60)
+    plt.savefig(SAVE_PATH+'bar_plot_inertia.png')  # Save the plot
+    
+    
+    cmap = plt.cm.Oranges
+    cmap_subset = colors.LinearSegmentedColormap.from_list(
+        'Blues_subset', cmap(np.linspace(0.3, 0.9, 256))
+        )
+
+    norm = plt.Normalize(vmin=0, vmax=1)
+    # Define bar positions
+    friction_norm = [normalize(friction_vectors[0])] # for vector_i in friction_vectors]
+    nomrs_value_friction = [np.linalg.norm(friction_vectors[0])] #for vector_i in friction_vectors]
+
+    bar_width = 0.02
+    positions = np.arange(len(friction_vectors[0]))
+    plt.figure(figsize=(21, 16))
+    # Plotting
+    for i, vector in enumerate(friction_norm):
+        cumulative_height = 0
+        idx = 0 
+        for j, value in enumerate(vector):
+            plt.bar(positions[i] + i * bar_width, 1, bottom=cumulative_height,
+                    width=bar_width, color=cmap_subset(norm(value)))
+            plt.text(positions[i] - bar_width+ 0.003, cumulative_height + 0.3,joint_name_list_plot[idx],
+                ha='right', va='bottom', fontsize=40)
+            idx +=1
+            cumulative_height += 1  # Each element has the same size (1 unit height)
+                # Place the norm value on top of each column
+        # plt.text(positions[i] + i * bar_width, cumulative_height + 0.1, f'Norm: {nomrs_value_friction[i]:.2f}',
+        #         ha='center', va='bottom', fontsize=40)
+
+    # y_thick = [positions[i] + i * bar_width for i in range(3)]
+    # Customizing the plot
+    # plt.yticks(positions + bar_width, joint_name_list_plot, fontsize=40, weight='bold')
+    plt.xticks([],[])
+    plt.yticks([],[])
+    plt.xlim([-0.05,0.05])
+    # plt.xticks(, legends_to_plot)
+    # Add color bar
+    sm = plt.cm.ScalarMappable(cmap=cmap_subset, norm=norm)
+    sm.set_array([])  # Only needed to add the colorbar
+    cbar=plt.colorbar(sm, ax=plt.gca(), label='')
+    cbar.ax.tick_params(labelsize=30)  
+    plt.title('Distribution motor friction [Nms/rad]',fontsize=60)
+    plt.savefig(SAVE_PATH+'bar_plot_friction.png')  # Save the plot
+    print("FRICTION NORM", nomrs_value_friction)
+    print("INERTIA NORM", nomrs_value_inertia)
+    for idx in range(3):
+        print("MPC time for ", legends_to_plot[idx], " =", time_traj_mpc_tot[idx])
+        print("payload time for ", legends_to_plot[idx], " =", time_traj_payload_tot[idx])   
 
 def print_main_hardware_charact_old(list_chromosome):
     item_idx = 0 
@@ -901,13 +1110,13 @@ def visualize_model(urdf_string_old, file_name):
     viz.drawToFile(file_name)
 
 if __name__ == "__main__":
-    final_population, all_generations = main()
-    all_gen = pickle.load( open("all_generations.pkl" , "rb" ) )
-    final_population = all_gen[-1]
-    analyse_output = False
+    # final_population, all_generations = main()
+    # all_gen = pickle.load( open("all_generations.pkl" , "rb" ) )
+    # final_population = all_gen[-1]
+    analyse_output = True
 
     if(analyse_output):
-        n_gen_tot = 271
+        n_gen_tot =500 # Buon risultat 
 
         # Create a subset of the 'Blues' colormap
         cmap = cm.Blues 
@@ -935,11 +1144,17 @@ if __name__ == "__main__":
             #     print(f"Individual: {ind}, Fitness: {ind.fitness.values}")
                 # Plot the Pareto front
             fitnesses = [ind.fitness.values for ind in pareto_front.items]
-            fitness1 = [f[0] for f in fitnesses]
-            fitness2 = [f[1] for f in fitnesses]
+            fitness1  = []
+            fitness2 = []
+            for f in fitnesses: 
+                if(f[0]<1e16 and f[1]<1e16):
+                    fitness1.append(f[0])
+                    fitness2.append(f[1])
+            # fitness1 = [f[0] for f in fitnesses]
+            # fitness2 = [f[1] for f in fitnesses]
 
             color = cmap_subset(norm(i))  # Normalize index to [0, 1] range
-            ax.scatter(fitness1, fitness2, color=color, linewidths=5)       
+            ax.scatter(fitness1, fitness2, color=color, linewidths=10)       
             # if(i == n_gen_tot - 1):
                 # ax.plot(fitness1, fitness2, color=color)
 
@@ -947,12 +1162,15 @@ if __name__ == "__main__":
         sm = plt.cm.ScalarMappable(cmap=cmap_subset, norm=norm)
         sm.set_array([])  # Provide a dummy array
         cbar = plt.colorbar(sm, ax=ax)  # Associate the colorbar with the correct axes
-        cbar.set_label('Generation', fontsize=20)
+        cbar.set_label('Generation', fontsize=60)
+        cbar.ax.tick_params(labelsize=30)  
 
         save_path_i = "Pareto_tot.png"
-        ax.set_xlabel('Payload lifting', fontsize=40)
-        ax.set_ylabel('Walking', fontsize=40)
-        ax.set_title('Pareto Front', fontsize=60)
+        ax.set_xlabel('Payload lifting', fontsize=60)
+        ax.set_ylabel('Walking', fontsize=60)
+        ax.set_title('Pareto Front Evolution', fontsize=60)
+        plt.xticks(fontsize=40, weight='bold')
+        plt.yticks(fontsize=40, weight='bold')
         # plt.yscale("log")
         # plt.xscale("log")
         ax.grid(True)
@@ -968,11 +1186,18 @@ if __name__ == "__main__":
         pareto_front.update(final_population)
 
         # Print the solutions in the Pareto front
+        idx_i = 0 
         for ind in pareto_front:
-            print(f"Individual: {ind}, Fitness: {ind.fitness.values}")
+            print(f"Individual:, Fitness: {ind.fitness.values}", idx_i)
+            idx_i = idx_i+1
             # evaluate(ind)
             # Plot the Pareto front
+        print("pareto front length",len(pareto_front.items))
         fitnesses = [ind.fitness.values for ind in pareto_front.items]
+        # for f in fitnesses: 
+            # if(f[0]<170 and f[1]<170):
+            #     fitness1.append(f[0])
+            #     fitness2.append(f[1])
         fitness1 = [f[0] for f in fitnesses]
         fitness2 = [f[1] for f in fitnesses]
 
@@ -980,22 +1205,86 @@ if __name__ == "__main__":
         plt.figure()
         plt.scatter(fitness1, fitness2, color=color, linewidths=5)        
         plt.plot(fitness1, fitness2, color=color)
-        # # plt.xscale("log")
+        plt.xscale("log")
         # plt.yscale("log")
-        save_path_i = "Pareto"+str(2)+".png"
+        save_path_i = "Pareto"+str(n_gen_tot)+".png"
         plt.xlabel('Payload lifting', fontsize="40")
         plt.ylabel('Walking', fontsize="40")
-        plt.title('Pareto Front', fontsize="60")
+        plt.title('Final Pareto Front', fontsize="60")
         plt.grid(True)
+        
         fig = plt.gcf()
         fig.set_size_inches((21, 16), forward=False)
+        plt.savefig(SAVE_PATH + save_path_i)
+        plt.close()
+
+        #Plot only few items 
+        # Load the final population
+        path_pop = "result/generation" + str(n_gen_tot-1)+".p"
+        final_population = pickle.load(open(path_pop, "rb"))
+
+        # Extract the Pareto front
+        pareto_front = tools.ParetoFront()
+        pareto_front.update(final_population)
+
+        # Extract fitness values from the Pareto front
+        fitnesses = [ind.fitness.values for ind in pareto_front.items]
+        fitness1 = [f[0] for f in fitnesses]
+        fitness2 = [f[1] for f in fitnesses]
+
+        # Find the indices of the specific points
+        min_f0_index = np.argmin(fitness1)
+        min_f1_index = np.argmin(fitness2)
+        middle_index = 14
+
+        # Plot the line connecting all Pareto front points
+        plt.figure()
+        color = cmap_subset(norm(n_gen_tot))  # Normalize index to [0, 1] range
+        plt.plot(fitness1, fitness2, color=color, linestyle='-', linewidth=5)
+
+        # Create a set of indices to exclude
+        exclude_indices = {min_f0_index, min_f1_index, middle_index}
+
+        # Create the new vector excluding the specific indices
+        filtered_fitnesses = [fitnesses[i] for i in range(len(fitnesses)) if i not in exclude_indices]
+
+        # If you want to separate the filtered fitnesses into fitness1 and fitness2 components:
+        filtered_fitness1 = [f[0] for f in filtered_fitnesses]
+        filtered_fitness2 = [f[1] for f in filtered_fitnesses]
+        # Plot the scatter for the specific pointsgreen
+        legends_to_plot = ["optimal payload lifting","compromise", "optimal walking"]
+        colors_plot = ["salmon", "mediumaquamarine","magenta"]
+        plt.scatter(fitness1[min_f0_index], fitness2[min_f0_index], color=colors_plot[0], linewidths=40, label='Optimla')
+        plt.scatter(fitness1[min_f1_index], fitness2[min_f1_index], color=colors_plot[2], linewidths=40, label='Min f_1')
+        plt.scatter(fitness1[middle_index], fitness2[middle_index], color=colors_plot[1], linewidths=40, label='Middle point')
+
+        plt.scatter(filtered_fitness1, filtered_fitness2,color= color, linewidths=5)
+        # Annotating the points
+        # plt.text(fitness1[min_f0_index], fitness2[min_f0_index], 'optimal payload lifting', fontsize=30, ha='left')
+        # plt.text(fitness1[min_f1_index], fitness2[min_f1_index], 'optimal walking', fontsize=30, ha='left')
+        # plt.text(fitness1[middle_index], fitness2[middle_index], 'compromise', fontsize=30, ha='left')
+
+        # Set scales and labels
+        plt.xscale("log")
+        plt.xlabel('Payload lifting', fontsize="60")
+        plt.ylabel('Walking', fontsize="60")
+        plt.title('Final Pareto Front', fontsize="60")
+        plt.grid(True)
+        # Set the font size of the tick labels
+        plt.xticks(fontsize=40, weight='bold')
+        plt.yticks(fontsize=40, weight='bold')
+
+        # Save the plot
+        fig = plt.gcf()
+        fig.set_size_inches((21, 16), forward=False)
+        save_path_i = "ParetoWithFewPoints"+str(n_gen_tot)+".png"
         plt.savefig(SAVE_PATH + save_path_i)
         plt.close()
 
         # Create a subset of the 'Blues' colormap
         cmap = cm.Blues 
         cmap_subset = colors.LinearSegmentedColormap.from_list(
-            'Blues_subset', cmap(np.linspace(0.2, 1, 256))
+            'Blues_subset', cmap(np.linspace(0.6, 1, 256))
         )
 
         # Load the population of the last generation
@@ -1036,5 +1325,28 @@ if __name__ == "__main__":
         plt.savefig(SAVE_PATH + save_path_i)
         plt.close()
 
-        print_main_hardware_charact(pareto_front)
+        # items_to_plot = [pareto_front.items[min_f0_index], pareto_front.items[middle_index], pareto_front.items[min_f1_index]]
+        items_to_plot = pareto_front.items
+        legends_to_plot = ["" for i in range(len(pareto_front.items))]
+        legends_to_plot[min_f0_index] = "optimal payload lifting"
+        legends_to_plot[min_f1_index] = "optimal walking"
+        legends_to_plot[middle_index] = "compromise"
+        # legends_to_plot[5] = "individual"
+
+
+        color_def = cmap_subset(norm(n_gen_tot))  # Normalize index to [0, 1] range
+        colors_plot_all = [color_def for i in range(len(pareto_front.items))]
+        colors_plot_all[min_f0_index] = colors_plot[0]
+        colors_plot_all[min_f1_index] = colors_plot[2]
+        colors_plot_all[middle_index] = colors_plot[1]
+        print(len(items_to_plot))
+        print(len(colors_plot_all))
+        print(len(legends_to_plot))
+        linewidths_plot = [15 for i in range(len(pareto_front.items))]
+        linewidths_plot[min_f0_index] = 40
+        linewidths_plot[min_f1_index] = 40
+        linewidths_plot[middle_index] = 40 
+        indexes_special = [min_f0_index, middle_index, min_f1_index]
+        # legends_to_plot = ["optimal payload lifting","compromise", "optimal walking"]
+        print_main_hardware_charact(items_to_plot, colors_plot_all, legends_to_plot, indexes_special,linewidths_plot)
 

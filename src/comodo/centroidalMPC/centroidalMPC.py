@@ -9,7 +9,7 @@ from comodo.centroidalMPC.mpcParameterTuning import MPCParameterTuning
 
 
 class CentroidalMPC(Planner):
-    def __init__(self, robot_model, step_length, frequency_ms=100):
+    def __init__(self, robot_model, step_length, frequency_ms=100, scaling = 1):
         self.dT = timedelta(milliseconds=frequency_ms)
         self.dT_in_seconds = frequency_ms / 1000
         self.contact_planner = FootPositionPlanner(
@@ -18,7 +18,6 @@ class CentroidalMPC(Planner):
             step_length=step_length,
         )
         self.centroidal_mpc = blf.reduced_model_controllers.CentroidalMPC()
-        scaling = 1.0
         scalingPos = 1.2
         scalingPosY = 0.0
         self.gravity = iDynTree.Vector3()

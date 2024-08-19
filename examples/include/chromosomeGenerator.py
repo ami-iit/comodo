@@ -10,6 +10,8 @@ class NameChromosome(Enum):
     TSID_PARAMTERES = auto()
     MPC_PARAMETERS  = auto()
     PAYLOAD_LIFTING = auto()
+    TIME_TRAJ_FEET = auto()
+    TIME_TRAJ_PAYLOAD = auto()
     NOT_SET = auto()
 
 class SubChromosome():
