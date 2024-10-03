@@ -133,8 +133,12 @@ class CentroidalMPC(Planner):
         self.mpc_param_handler.set_parameter_float(
             "angular_momentum_weight", mpc_parameters.angular_momentum_weight
         )
+        self.mpc_param_handler.set_parameter_string("solver_name", "ipopt")
 
-        self.centroidal_mpc.initialize(self.mpc_param_handler)
+        if not self.centroidal_mpc.initialize(self.mpc_param_handler):
+            raise RuntimeError("Error while initializing the MPC")
+        else:
+            print("MPC Initialized")
 
     def configure(self, s_init, H_b_init):
         self.contact_planner.update_initial_position(Hb=H_b_init, s=s_init)
@@ -154,8 +158,8 @@ class CentroidalMPC(Planner):
         for item in vector_phase_list:
             if (
                 len(item.active_contacts) == 2
-                and not (vector_phase_list.first_phase() is item)
-                and not (vector_phase_list.last_phase() is item)
+                and vector_phase_list.first_phase() is not item
+                and vector_phase_list.last_phase() is not item
             ):
                 time_knots.append((item.end_time + item.begin_time) / 2)
                 p1 = item.active_contacts["left_foot"].pose.translation()
