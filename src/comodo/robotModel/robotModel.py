@@ -133,8 +133,6 @@ class RobotModel(KinDynComputations):
             if "elbow" in joint_name: 
                 self.solver.subject_to(self.s[index] == elbow)    
         
-        # self.solver.subject_to(self.s[9] == self.s[15])
-        # self.solver.subject_to(cs.norm_2(self.quat_pose_b[:4]) == 1.0)
         self.solver.subject_to(H_left_foot[2, 3] == 0.0)
         self.solver.subject_to(H_right_foot[2, 3] == 0.0)
         self.solver.subject_to(quat_left_foot == reference_rotation)
