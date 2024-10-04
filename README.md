@@ -52,7 +52,6 @@ Working with drake as the simulator backend requires the following additional de
 ```
 conda install meshio tqdm
 pip install drake git+https://github.com/ami-iit/amo_urdf
-
 ```
 
 ## Usage 
@@ -64,7 +63,7 @@ Take a look at the [examples](./examples) folder!
 This repository is maintained by 
 |                                                              |                                                      |
 | :----------------------------------------------------------: | :--------------------------------------------------: |
-| [<img src="https://user-images.githubusercontent.com/56030908/135461492-6d9a1174-19bd-46b3-bee6-c4dbaea9e210.jpeg" width="40">](https://github.com/S-Dafarra) | [@CarlottaSartore](https://github.com/CarlottaSartore) |
+| <img src="https://user-images.githubusercontent.com/56030908/135461492-6d9a1174-19bd-46b3-bee6-c4dbaea9e210.jpeg" width="40"> | [@CarlottaSartore](https://github.com/CarlottaSartore) |
 
 
 
