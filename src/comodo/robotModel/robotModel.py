@@ -61,14 +61,18 @@ class RobotModel(KinDynComputations):
         self.gravity.zero()
         self.gravity.setVal(2, -9.81)
         self.H_b = iDynTree.Transform()
-        path_temp_xml = tempfile.NamedTemporaryFile(mode="w+")
-        path_temp_xml.write(urdfstring)
-        super().__init__(path_temp_xml.name, self.joint_name_list, self.base_link)
+        super().__init__(urdfstring, self.joint_name_list, self.base_link)
         self.H_left_foot = self.forward_kinematics_fun(self.left_foot_frame)
         self.H_right_foot = self.forward_kinematics_fun(self.right_foot_frame)
 
     def override_control_boar_list(self, remote_control_board_list: list):
         self.remote_control_board_list = remote_control_board_list
+
+    def set_foot_corner(self, corner_0, corner_1, corner_2, corner_3):
+        self.corner_0 = corner_0
+        self.corner_1 = corner_1
+        self.corner_2 = corner_2
+        self.corner_3 = corner_3
 
     def set_limbs_indexes(
         self,
@@ -121,13 +125,14 @@ class RobotModel(KinDynComputations):
         H_torso = self.w_H_torso(H_b, self.s)
         quat_torso = self.rotation_matrix_to_quaternion(H_torso[:3, :3])
         reference_rotation = np.asarray([1.0, 0.0, 0.0, 0.0])
-        self.solver.subject_to(self.s[17] == desired_knee)
-        self.solver.subject_to(self.s[11] == desired_knee)
-        self.solver.subject_to(self.s[3] == elbow)
-        self.solver.subject_to(self.s[7] == elbow)
-        self.solver.subject_to(self.s[1] == shoulder_roll)
-        self.solver.subject_to(self.s[5] == shoulder_roll)
-        self.solver.subject_to(self.s[9] == self.s[15])
+        for index, joint_name in enumerate(self.joint_name_list):
+            if "knee" in joint_name:
+                self.solver.subject_to(self.s[index] == desired_knee)
+            if "shoulder_roll" in joint_name: 
+                self.solver.subject_to(self.s[index] == shoulder_roll)
+            if "elbow" in joint_name: 
+                self.solver.subject_to(self.s[index] == elbow)    
+        
         self.solver.subject_to(H_left_foot[2, 3] == 0.0)
         self.solver.subject_to(H_right_foot[2, 3] == 0.0)
         self.solver.subject_to(quat_left_foot == reference_rotation)
@@ -178,6 +183,15 @@ class RobotModel(KinDynComputations):
         w_H_init = np.linalg.inv(w_H_lefFoot_num) @ w_H_torso_num
         return w_H_init
 
+    def compute_com_init(self): 
+        com = self.CoM_position_fun()
+        return np.array(com(self.w_H_b_init,self.s_init))
+
+    def set_initial_position(self, s_init, w_H_b_init, xyz_rpy_init): 
+        self.s_init = s_init
+        self.w_H_b_init = w_H_b_init
+        self.xyz_rpy_init = xyz_rpy_init
+        
     def rotation_matrix_to_quaternion(self, R):
         # Ensure the matrix is a valid rotation matrix (orthogonal with determinant 1)
         trace = cs.trace(R)

@@ -33,13 +33,21 @@ To install you can use the following commands
 
 ```
 conda create -n comododev -c conda-forge adam-robotics idyntree bipedal-locomotion-framework=0.19.0 mujoco mujoco-python numpy mujoco-python-viewer matplotlib urllib3 urchin resolve-robotics-uri-py notebook
-
 conda activate comododev
 pip install --no-deps git+https://github.com/CarlottaSartore/urdf-modifiers.git@scalar_modification 
 pip install --no-deps -e .
 
 ```
 
+### With hippopt 
+
+```
+conda install -c conda-forge -c robotology casadi pytest liecasadi  meshcat-python ffmpeg-python
+pip install --no-deps git+https://github.com/ami-iit/hippopt.git
+```
+ 
+
+### With Drake 
 Working with drake as the simulator backend requires the following additional dependencies,
 ```
 conda install meshio tqdm
@@ -55,7 +63,7 @@ Take a look at the [examples](./examples) folder!
 This repository is maintained by 
 |                                                              |                                                      |
 | :----------------------------------------------------------: | :--------------------------------------------------: |
-| [<img src="https://user-images.githubusercontent.com/56030908/135461492-6d9a1174-19bd-46b3-bee6-c4dbaea9e210.jpeg" width="40">](https://github.com/S-Dafarra) | [@CarlottaSartore](https://github.com/CarlottaSartore) |
+| <img src="https://user-images.githubusercontent.com/56030908/135461492-6d9a1174-19bd-46b3-bee6-c4dbaea9e210.jpeg" width="40"> | [@CarlottaSartore](https://github.com/CarlottaSartore) |
 
 
 
