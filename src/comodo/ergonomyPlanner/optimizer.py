@@ -1222,7 +1222,7 @@ class MultiModelOptimizer:
 
         # p_opts = {"expand": True}
         p_opts = {}
-        s_opts = {"max_iter": 100000, "linear_solver": "ma27"}
+        s_opts = {"linear_solver": "mumps"}
         self.solver.solver("ipopt", p_opts, s_opts)
 
         self.contacts = {}

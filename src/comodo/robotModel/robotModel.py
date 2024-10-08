@@ -540,7 +540,7 @@ class RobotModel(KinDynComputations):
             # Create the new geom element
             new_geom = ET.Element('geom')
             new_geom.set('name', 'base_link_collision')
-            new_geom.set('size', '0.15 0.20 0.0425')
+            new_geom.set('size', '0.15 0.20 0.0825')
             new_geom.set('type', 'box')
             new_body.append(new_geom)
 
