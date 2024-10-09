@@ -3,7 +3,8 @@ from __future__ import annotations
 import logging
 import math
 import pathlib
-from typing import Union
+from enum import Enum
+from typing import Optional, Union
 
 import jax.numpy as jnp
 import jaxsim
@@ -11,6 +12,7 @@ import jaxsim.api as js
 import numpy as np
 import numpy.typing as npt
 from jaxsim import VelRepr, integrators
+from jaxsim.mujoco import MujocoVideoRecorder
 from jaxsim.mujoco.loaders import UrdfToMjcf
 from jaxsim.mujoco.model import MujocoModelHelper
 from jaxsim.mujoco.visualizer import MujocoVisualizer
@@ -23,15 +25,13 @@ from jaxsim.rbda.contacts.visco_elastic import ViscoElasticContacts
 
 from comodo.abstractClasses.simulator import Simulator
 
-# Logger setup
+# === Logger setup ===
 logger = logging.getLogger("JaxsimSimulator")
 logger.setLevel(logging.DEBUG)
-
 # Remove default handlers if any
 if logger.hasHandlers():
     logger.handlers.clear()
 logger.propagate = False
-
 # Console handler
 console_handler = logging.StreamHandler()
 formatter = logging.Formatter(
@@ -41,21 +41,65 @@ formatter = logging.Formatter(
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
+class ContactModelEnum(Enum):
+    RIGID = "rigid"
+    RELAXED_RIGID = "relaxed_rigid"
+    VISCO_ELASTIC = "visco_elastic"
+    ELASTIC = "elastic"
 
 class JaxsimSimulator(Simulator):
     def __init__(self) -> None:
-        self._dt = 0.000_1
-        self._tau = jnp.zeros(20)
-        self._visualization_mode = None
-        self._viz = None
-        self._recorder = None
-        self._link_contact_forces = None
-        self._left_foot_link_idx = None
-        self._right_foot_link_idx = None
-        self._left_footsole_frame_idx = None
-        self._right_footsole_frame_idx = None
-        self._viz_fps = 10
-        self._last_rendered_t_ns = 0.0
+        # Flag to check if the simulator is initialized
+        self._is_initialized: bool = False
+
+        # Simulation data
+        self._data: Optional[js.data.JaxSimModelData] = None
+
+        # Simulation model
+        self._model: Optional[js.model.JaxSimModel] = None
+
+        # Time step for the simulation
+        self._dt: Optional[float] = None
+
+        # Joint torques
+        self._tau: Optional[npt.ArrayLike] = None
+
+        # Link contact forces
+        self._link_contact_forces: Optional[npt.ArrayLike] = None
+
+        # Contact model to use
+        self._contact_model_type: ContactModelEnum = ContactModelEnum.RELAXED_RIGID
+
+        # Index of the left foot link
+        self._left_foot_link_idx: Optional[int] = None
+
+        # Index of the right foot link
+        self._right_foot_link_idx: Optional[int] = None
+
+        # Index of the left foot sole frame
+        self._left_footsole_frame_idx: Optional[int] = None
+
+        # Index of the right foot sole frame
+        self._right_footsole_frame_idx: Optional[int] = None
+
+        # ==== Visualization attributes ====
+        # Mode for visualization ('record', 'interactive', or None)
+        self._visualization_mode: Optional[str] = None
+
+        # Visualization object
+        self._viz: Optional[MujocoVisualizer] = None
+
+        # Recorder for video recording
+        self._recorder: Optional[MujocoVideoRecorder] = None
+
+        # Frames per second for visualization
+        self._viz_fps: int = 10
+
+        # Last rendered time in nanoseconds
+        self._last_rendered_t_ns: float = 0.0
+
+        # Optional Mujoco model helper
+        self._mj_model_helper: Optional[MujocoModelHelper] = None
 
     def load_model(
         self,
@@ -84,7 +128,7 @@ class JaxsimSimulator(Simulator):
             considered_joints=robot_model.joint_name_list,
         )
 
-        self.data = js.data.JaxSimModelData.build(
+        self._data = js.data.JaxSimModelData.build(
             model=model,
             velocity_representation=VelRepr.Mixed,
             base_position=jnp.array(xyz_rpy[:3]),
@@ -112,20 +156,20 @@ class JaxsimSimulator(Simulator):
         #     x0=self.data.state, t0=0, dt=self.dt
         # )
 
-        self.model = model
+        self._model = model
 
         # TODO: expose these names as parameters
         self._left_foot_link_idx = js.link.name_to_idx(
-            model=self.model, link_name="l_ankle_2"
+            model=self._model, link_name="l_ankle_2"
         )
         self._right_foot_link_idx = js.link.name_to_idx(
-            model=self.model, link_name="r_ankle_2"
+            model=self._model, link_name="r_ankle_2"
         )
         self._left_footsole_frame_idx = js.frame.name_to_idx(
-            model=self.model, frame_name="l_sole"
+            model=self._model, frame_name="l_sole"
         )
         self._right_footsole_frame_idx = js.frame.name_to_idx(
-            model=self.model, frame_name="r_sole"
+            model=self._model, frame_name="r_sole"
         )
 
         logging.info(f"Left foot link index: {self._left_foot_link_idx}")
@@ -143,16 +187,16 @@ class JaxsimSimulator(Simulator):
                 )
 
             mjcf_string, assets = UrdfToMjcf.convert(
-                urdf=self.model.built_from,
+                urdf=self._model.built_from,
             )
 
-            self.mj_model_helper = MujocoModelHelper.build_from_xml(
+            self._mj_model_helper = MujocoModelHelper.build_from_xml(
                 mjcf_description=mjcf_string, assets=assets
             )
 
             self._recorder = jaxsim.mujoco.MujocoVideoRecorder(
-                model=self.mj_model_helper.model,
-                data=self.mj_model_helper.data,
+                model=self._mj_model_helper.model,
+                data=self._mj_model_helper.data,
                 fps=30,
             )
             logging.warning("recorder initialized")
@@ -173,9 +217,9 @@ class JaxsimSimulator(Simulator):
 
         for _ in range(n_step):
             # Comment this to use non visco-elastic models
-            self.data, _ = jaxsim.rbda.contacts.visco_elastic.step(
-                model=self.model,
-                data=self.data,
+            self._data, _ = jaxsim.rbda.contacts.visco_elastic.step(
+                model=self._model,
+                data=self._data,
                 dt=self._dt,
                 joint_force_references=torques,
                 link_forces=None,
@@ -192,7 +236,7 @@ class JaxsimSimulator(Simulator):
             #     link_forces=None,  # f
             # )
 
-            current_time_ns = np.array(object=self.data.time_ns).astype(int)
+            current_time_ns = np.array(object=self._data.time_ns).astype(int)
 
             match self._visualization_mode:
                 case "record":
@@ -218,21 +262,21 @@ class JaxsimSimulator(Simulator):
         # )
 
     def get_base(self) -> npt.ArrayLike:
-        return np.array(self.data.base_transform())
+        return np.array(self._data.base_transform())
 
     def get_base_velocity(self) -> npt.ArrayLike:
-        return np.array(self.data.base_velocity())
+        return np.array(self._data.base_velocity())
 
     def get_simulation_time(self) -> float:
-        return self.data.time()
+        return self._data.time()
 
     def reset_simulation_time(self) -> None:
-        self.data = self.data.replace(time_ns=jnp.array(0, dtype=jnp.uint64))
-        assert self.data.time_ns == 0
+        self._data = self._data.replace(time_ns=jnp.array(0, dtype=jnp.uint64))
+        assert self._data.time_ns == 0
 
     def get_state(self) -> Union[npt.ArrayLike, npt.ArrayLike, npt.ArrayLike]:
-        s = np.array(self.data.joint_positions())
-        s_dot = np.array(self.data.joint_velocities())
+        s = np.array(self._data.joint_positions())
+        s_dot = np.array(self._data.joint_velocities())
         tau = np.array(self._tau)
 
         return s, s_dot, tau
@@ -241,24 +285,24 @@ class JaxsimSimulator(Simulator):
         return self._link_contact_forces
 
     def total_mass(self) -> float:
-        return js.model.total_mass(self.model)
+        return js.model.total_mass(self._model)
 
     def get_feet_positions(self) -> tuple[npt.ArrayLike, npt.ArrayLike]:
         W_p_lf = js.frame.transform(
-            model=self.model,
-            data=self.data,
+            model=self._model,
+            data=self._data,
             frame_index=self._left_footsole_frame_idx,
         )[0:3, 3]
         W_p_rf = js.frame.transform(
-            model=self.model,
-            data=self.data,
+            model=self._model,
+            data=self._data,
             frame_index=self._right_footsole_frame_idx,
         )[0:3, 3]
 
         return (W_p_lf, W_p_rf)
 
     def get_com_position(self) -> npt.ArrayLike:
-        return js.com.com_position(self.model, self.data)
+        return js.com.com_position(self._model, self._data)
 
     def close(self) -> None:
         pass
@@ -281,40 +325,40 @@ class JaxsimSimulator(Simulator):
     def render(self):
         if not self._viz:
             mjcf_string, assets = UrdfToMjcf.convert(
-                urdf=self.model.built_from,
+                urdf=self._model.built_from,
             )
 
-            self.mj_model_helper = MujocoModelHelper.build_from_xml(
+            self._mj_model_helper = MujocoModelHelper.build_from_xml(
                 mjcf_description=mjcf_string, assets=assets
             )
 
             self._viz = MujocoVisualizer(
-                model=self.mj_model_helper.model, data=self.mj_model_helper.data
+                model=self._mj_model_helper.model, data=self._mj_model_helper.data
             )
             self._handle = self._viz.open_viewer()
 
-        self.mj_model_helper.set_base_position(
-            position=self.data.base_position(),
+        self._mj_model_helper.set_base_position(
+            position=self._data.base_position(),
         )
-        self.mj_model_helper.set_base_orientation(
-            orientation=self.data.base_orientation(),
+        self._mj_model_helper.set_base_orientation(
+            orientation=self._data.base_orientation(),
         )
-        self.mj_model_helper.set_joint_positions(
-            positions=self.data.joint_positions(),
-            joint_names=self.model.joint_names(),
+        self._mj_model_helper.set_joint_positions(
+            positions=self._data.joint_positions(),
+            joint_names=self._model.joint_names(),
         )
         self._viz.sync(viewer=self._handle)
 
     def record_frame(self):
-        self.mj_model_helper.set_base_position(
-            position=self.data.base_position(),
+        self._mj_model_helper.set_base_position(
+            position=self._data.base_position(),
         )
-        self.mj_model_helper.set_base_orientation(
-            orientation=self.data.base_orientation(),
+        self._mj_model_helper.set_base_orientation(
+            orientation=self._data.base_orientation(),
         )
-        self.mj_model_helper.set_joint_positions(
-            positions=self.data.joint_positions(),
-            joint_names=self.model.joint_names(),
+        self._mj_model_helper.set_joint_positions(
+            positions=self._data.joint_positions(),
+            joint_names=self._model.joint_names(),
         )
 
         self._recorder.record_frame()
@@ -330,11 +374,11 @@ class JaxsimSimulator(Simulator):
         logging.warning(f"Setting terrain parameters: {terrain_params_dict}")
 
         contact_params = js.contact.estimate_good_soft_contacts_parameters(
-            model=self.model,
+            model=self._model,
             number_of_active_collidable_points_steady_state=16,
             max_penetration=terrain_params_dict["max_penetration"],
             damping_ratio=terrain_params_dict["damping_ratio"],
             static_friction_coefficient=terrain_params_dict["mu"],
         )
 
-        self.data = self.data.replace(contacts_params=contact_params)
+        self._data = self._data.replace(contacts_params=contact_params)
