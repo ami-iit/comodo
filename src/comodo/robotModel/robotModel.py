@@ -3,6 +3,7 @@ import numpy as np
 from urchin import URDF
 from urchin import Joint
 from urchin import Link
+from typing import Sequence
 import mujoco
 import tempfile
 import xml.etree.ElementTree as ET
@@ -329,7 +330,10 @@ class RobotModel(KinDynComputations):
         robot_urdf_string_original = ET.tostring(root, encoding="unicode")
         return robot_urdf_string_original
 
-    def get_mujoco_model(self):
+    def get_mujoco_model(self, floor_inclination: Sequence[float]) -> mujoco.MjModel:
+        if len(floor_inclination) != 3:
+            raise ValueError("Floor inclination must have 3 elements")
+
         urdf_string = self.get_mujoco_urdf_string()
         with open("temp.urdf", "w+") as f:
             f.write(urdf_string)
@@ -432,6 +436,7 @@ class RobotModel(KinDynComputations):
         floor.set("type", "plane")
         floor.set("material", "grid")
         floor.set("condim", "3")
+        floor.set("euler", "{} {} {}".format(*floor_inclination))
         world_elem.append(floor)
         new_xml = ET.tostring(tree.getroot(), encoding="unicode")
         return new_xml

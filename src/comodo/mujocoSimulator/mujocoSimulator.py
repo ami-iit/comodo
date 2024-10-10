@@ -1,5 +1,6 @@
 from comodo.abstractClasses.simulator import Simulator
 from comodo.robotModel.robotModel import RobotModel
+from typing import Sequence
 import mujoco
 import math
 import numpy as np
@@ -15,7 +16,7 @@ class MujocoSimulator(Simulator):
         self.compute_misalignment_gravity_fun()
         super().__init__()
 
-    def load_model(self, robot_model: RobotModel, s, xyz_rpy, kv_motors=None, Im=None) -> None:
+    def load_model(self, robot_model: RobotModel, s, xyz_rpy, kv_motors=None, Im=None, floor_inclination_deg: Sequence[float] = [0, 0, 0]) -> None:
         """
         Loads the robot model into the MuJoCo simulator.
         
@@ -28,10 +29,17 @@ class MujocoSimulator(Simulator):
         Returns:
             None
         """
+        if len(floor_inclination_deg) != 3:
+            raise ValueError(f"floor_inclination should be a 3-element sequence, but got a sequence of length {len(floor_inclination)}")
+        try:
+            floor_inclination_deg = np.array(floor_inclination_deg, dtype=float)
+            floor_inclination_deg = np.deg2rad(floor_inclination_deg)
+        except ValueError:
+            raise ValueError(f"floor_inclination should be a 3-element sequence of numbers, but got {floor_inclination_deg} of type {type(floor_inclination_deg)}")
 
         self.robot_model = robot_model
-
-        mujoco_xml = robot_model.get_mujoco_model()
+        
+        mujoco_xml = robot_model.get_mujoco_model(floor_inclination=floor_inclination_deg)
         self.model = mujoco.MjModel.from_xml_string(mujoco_xml)
         self.data = mujoco.MjData(self.model)
         self.create_mapping_vector_from_mujoco()
