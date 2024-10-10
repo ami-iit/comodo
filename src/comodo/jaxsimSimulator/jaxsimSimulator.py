@@ -4,7 +4,7 @@ import logging
 import math
 import pathlib
 from enum import Enum
-from typing import Optional, Union
+from typing import Any, Optional, Union
 
 import jax.numpy as jnp
 import jaxsim
@@ -16,6 +16,8 @@ from jaxsim.mujoco import MujocoVideoRecorder
 from jaxsim.mujoco.loaders import UrdfToMjcf
 from jaxsim.mujoco.model import MujocoModelHelper
 from jaxsim.mujoco.visualizer import MujocoVisualizer
+from jaxsim.rbda.contacts.common import ContactsParams
+from jaxsim.rbda.contacts.soft import SoftContacts
 from jaxsim.rbda.contacts.relaxed_rigid import (
     RelaxedRigidContacts,
     RelaxedRigidContactsParams,
@@ -24,6 +26,7 @@ from jaxsim.rbda.contacts.rigid import RigidContacts, RigidContactsParams
 from jaxsim.rbda.contacts.visco_elastic import ViscoElasticContacts
 
 from comodo.abstractClasses.simulator import Simulator
+from comodo.robotModel.robotModel import RobotModel
 
 # === Logger setup ===
 logger = logging.getLogger("JaxsimSimulator")
@@ -41,11 +44,13 @@ formatter = logging.Formatter(
 console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
+
 class ContactModelEnum(Enum):
     RIGID = "rigid"
     RELAXED_RIGID = "relaxed_rigid"
     VISCO_ELASTIC = "visco_elastic"
-    ELASTIC = "elastic"
+    SOFT = "soft"
+
 
 class JaxsimSimulator(Simulator):
     def __init__(self) -> None:
@@ -57,6 +62,12 @@ class JaxsimSimulator(Simulator):
 
         # Simulation model
         self._model: Optional[js.model.JaxSimModel] = None
+
+        # Integrator (not used for visco-elastic contacts)
+        self._integrator: Optional[integrators.common.Integrator] = None
+
+        # Integrator state for the simulation (not used for visco-elastic contacts)
+        self._integrator_state: Optional[dict[str, Any]] = None
 
         # Time step for the simulation
         self._dt: Optional[float] = None
@@ -103,79 +114,107 @@ class JaxsimSimulator(Simulator):
 
     def load_model(
         self,
-        robot_model,
-        s=None,
-        xyz_rpy: npt.ArrayLike = None,
-        terrain_params=None,
-        visualization_mode=None,
+        robot_model: RobotModel,
+        *,
+        dt: float = 0.001,
+        xyz_rpy: npt.ArrayLike = np.zeros(6),
+        contact_model_type: ContactModelEnum = ContactModelEnum.RELAXED_RIGID,
+        s: Optional[npt.ArrayLike] = None,
+        contact_params: Optional[ContactsParams] = None,
+        left_foot_link_name: Optional[str] = "l_ankle_2",
+        right_foot_link_name: Optional[str] = "r_ankle_2",
+        left_foot_sole_frame_name: Optional[str] = "l_sole",
+        right_foot_sole_frame_name: Optional[str] = "r_sole",
+        visualization_mode: Optional[str] = None,
     ) -> None:
+        # ==== Initialize simulator model and data ====
+
+        self._dt = dt
+        self._contact_model_type = contact_model_type
+
+        match contact_model_type:
+            case ContactModelEnum.RIGID:
+                contact_model = RigidContacts()
+            case ContactModelEnum.RELAXED_RIGID:
+                contact_model = RelaxedRigidContacts()
+            case ContactModelEnum.VISCO_ELASTIC:
+                contact_model = ViscoElasticContacts()
+            case ContactModelEnum.SOFT:
+                contact_model = SoftContacts()
+            case _:
+                raise ValueError(f"Invalid contact model type: {contact_model_type}")
+
         model = js.model.JaxSimModel.build_from_model_description(
             model_description=robot_model.urdf_string,
             model_name=robot_model.robot_name,
-            # contact_model=RigidContacts(
-            #     parameters=RigidContactsParams(mu=0.5, K=1.0e4, D=1.0e2)
-            # ),
-            # contact_model=RelaxedRigidContacts(
-            #     parameters=RelaxedRigidContactsParams(
-            #         mu=0.8,
-            #         time_constant=0.005,
-            #     )
-            # ),
-            contact_model=ViscoElasticContacts(),
+            contact_model=contact_model,
         )
+
         model = js.model.reduce(
             model=model,
             considered_joints=robot_model.joint_name_list,
         )
 
+        self._model = model
+
+        if contact_params is None:
+            match contact_model_type:
+                case ContactModelEnum.RIGID:
+                    contact_params = RigidContactsParams.build(mu=0.5, K=1.0e4, D=1.0e2)
+                case ContactModelEnum.RELAXED_RIGID:
+                    contact_params = RelaxedRigidContactsParams.build(
+                        mu=0.8, time_constant=0.005
+                    )
+                case ContactModelEnum.VISCO_ELASTIC | ContactModelEnum.SOFT:
+                    contact_params = js.contact.estimate_good_soft_contacts_parameters(
+                        model=self._model,
+                        number_of_active_collidable_points_steady_state=16,
+                        max_penetration=0.002,
+                        damping_ratio=1.0,
+                        static_friction_coefficient=1.0,
+                    )
+                case _:
+                    raise ValueError(
+                        f"Invalid contact model type: {contact_model_type}"
+                    )
+
+        s = s or np.zeros(self._model.dofs())
+
         self._data = js.data.JaxSimModelData.build(
-            model=model,
+            model=self._model,
             velocity_representation=VelRepr.Mixed,
             base_position=jnp.array(xyz_rpy[:3]),
             base_quaternion=jnp.array(self.RPY_to_quat(*xyz_rpy[3:])),
             joint_positions=jnp.array(s),
-            contacts_params=js.contact.estimate_good_soft_contacts_parameters(
-                model=model,
-                number_of_active_collidable_points_steady_state=16,
-                max_penetration=0.002,
-                damping_ratio=1.0,
-                static_friction_coefficient=1.0,
-            ),
+            contacts_params=contact_params,
         )
 
-        # Un comment to use non visco-elastic models
-        # self.integrator = integrators.fixed_step.RungeKutta4.build(
-        #     dynamics=js.ode.wrap_system_dynamics_for_integration(
-        #         model=model,
-        #         data=self.data,
-        #         system_dynamics=js.ode.system_dynamics,
-        #     ),
-        # )
+        if contact_model_type is not ContactModelEnum.VISCO_ELASTIC:
+            self._integrator = integrators.fixed_step.RungeKutta4.build(
+                dynamics=js.ode.wrap_system_dynamics_for_integration(
+                    model=self._model,
+                    data=self._data,
+                    system_dynamics=js.ode.system_dynamics,
+                )
+            )
 
-        # self.integrator_state = self.integrator.init(
-        #     x0=self.data.state, t0=0, dt=self.dt
-        # )
-
-        self._model = model
+            self._integrator_state = self._integrator.init(
+                x0=self._data.state, t0=0, dt=self._dt
+            )
 
         # TODO: expose these names as parameters
         self._left_foot_link_idx = js.link.name_to_idx(
-            model=self._model, link_name="l_ankle_2"
+            model=self._model, link_name=left_foot_link_name
         )
         self._right_foot_link_idx = js.link.name_to_idx(
-            model=self._model, link_name="r_ankle_2"
+            model=self._model, link_name=right_foot_link_name
         )
         self._left_footsole_frame_idx = js.frame.name_to_idx(
-            model=self._model, frame_name="l_sole"
+            model=self._model, frame_name=left_foot_sole_frame_name
         )
         self._right_footsole_frame_idx = js.frame.name_to_idx(
-            model=self._model, frame_name="r_sole"
+            model=self._model, frame_name=right_foot_sole_frame_name
         )
-
-        logging.info(f"Left foot link index: {self._left_foot_link_idx}")
-        logging.info(f"Right foot link index: {self._right_foot_link_idx}")
-        logging.info(f"Left foot sole frame index: {self._left_footsole_frame_idx}")
-        logging.info(f"Right foot sole frame index: {self._right_footsole_frame_idx}")
 
         self._visualization_mode = visualization_mode
 
@@ -194,12 +233,13 @@ class JaxsimSimulator(Simulator):
                 mjcf_description=mjcf_string, assets=assets
             )
 
-            self._recorder = jaxsim.mujoco.MujocoVideoRecorder(
+            self._recorder = MujocoVideoRecorder(
                 model=self._mj_model_helper.model,
                 data=self._mj_model_helper.data,
                 fps=30,
             )
-            logging.warning("recorder initialized")
+
+        self._is_initialized = True
 
     def get_feet_wrench(self) -> npt.ArrayLike:
         wrenches = self.get_link_contact_forces()
