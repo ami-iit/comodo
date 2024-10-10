@@ -4,7 +4,7 @@ import logging
 import math
 import pathlib
 from enum import Enum
-from typing import Any, Optional, Union
+from typing import Any, Optional, Tuple
 
 import jax.numpy as jnp
 import jaxsim
@@ -112,6 +112,8 @@ class JaxsimSimulator(Simulator):
         # Optional Mujoco model helper
         self._mj_model_helper: Optional[MujocoModelHelper] = None
 
+    # ==== Simulator interface methods ====
+
     def load_model(
         self,
         robot_model: RobotModel,
@@ -184,7 +186,7 @@ class JaxsimSimulator(Simulator):
             model=self._model,
             velocity_representation=VelRepr.Mixed,
             base_position=jnp.array(xyz_rpy[:3]),
-            base_quaternion=jnp.array(self.RPY_to_quat(*xyz_rpy[3:])),
+            base_quaternion=jnp.array(self._RPY_to_quat(*xyz_rpy[3:])),
             joint_positions=jnp.array(s),
             contacts_params=contact_params,
         )
@@ -241,93 +243,111 @@ class JaxsimSimulator(Simulator):
 
         self._is_initialized = True
 
-    def get_feet_wrench(self) -> npt.ArrayLike:
-        wrenches = self.get_link_contact_forces()
-
-        left_foot = np.array(wrenches[self._left_foot_link_idx])
-        right_foot = np.array(wrenches[self._right_foot_link_idx])
-        return left_foot, right_foot
-
     def set_input(self, input: npt.ArrayLike) -> None:
         self._tau = jnp.array(input)
 
-    def step(self, torques: np.ndarray = None, n_step: int = 1) -> None:
-        if torques is None:
-            torques = np.zeros(20)
+    def step(self, n_step: int = 1) -> None:
+        assert (
+            self._is_initialized
+        ), "Simulator is not initialized, call load_model first."
 
         for _ in range(n_step):
-            # Comment this to use non visco-elastic models
-            self._data, _ = jaxsim.rbda.contacts.visco_elastic.step(
-                model=self._model,
-                data=self._data,
-                dt=self._dt,
-                joint_force_references=torques,
-                link_forces=None,
-            )
+            if self._contact_model_type is ContactModelEnum.VISCO_ELASTIC:
+                self._data, _ = jaxsim.rbda.contacts.visco_elastic.step(
+                    model=self._model,
+                    data=self._data,
+                    dt=self._dt,
+                    joint_force_references=self._tau,
+                    link_forces=None,
+                )
 
-            # Uncomment this to use non visco-elastic models
-            # self.data, self.integrator_state = js.model.step(
-            #     model=self.model,
-            #     data=self.data,
-            #     dt=self.dt,
-            #     integrator=self.integrator,
-            #     integrator_state=self.integrator_state,
-            #     joint_forces=torques,
-            #     link_forces=None,  # f
-            # )
+            else:
+                # All other contact models
+                self._data, self._integrator_state = js.model.step(
+                    model=self._model,
+                    data=self._data,
+                    dt=self.dt,
+                    integrator=self._integrator,
+                    integrator_state=self._integrator_state,
+                    joint_forces=self._tau,
+                    link_forces=None,
+                )
 
-            current_time_ns = np.array(object=self._data.time_ns).astype(int)
+                self.link_contact_forces = js.model.link_contact_forces(
+                    model=self._model,
+                    data=self._data,
+                    joint_force_references=self._tau,
+                )
+
+            current_time_ns = self._data.time_ns.astype(int)
 
             match self._visualization_mode:
                 case "record":
                     if current_time_ns - self._last_rendered_t_ns >= int(
                         1e9 / self._recorder.fps
                     ):
-                        self.record_frame()
+                        self._record_frame()
                         self._last_rendered_t_ns = current_time_ns
 
                 case "interactive":
                     if current_time_ns - self._last_rendered_t_ns >= int(
                         1e9 / self._viz_fps
                     ):
-                        self.render()
+                        self._render()
                         self._last_rendered_t_ns = current_time_ns
                 case None:
                     pass
 
-        # self.link_contact_forces = js.model.link_contact_forces(
-        #     model=self.model,
-        #     data=self.data,
-        #     joint_force_references=torques,
-        # )
+    def get_state(self) -> Tuple[npt.ArrayLike, npt.ArrayLike, npt.ArrayLike]:
+        assert (
+            self._is_initialized
+        ), "Simulator is not initialized, call load_model first."
 
-    def get_base(self) -> npt.ArrayLike:
-        return np.array(self._data.base_transform())
-
-    def get_base_velocity(self) -> npt.ArrayLike:
-        return np.array(self._data.base_velocity())
-
-    def get_simulation_time(self) -> float:
-        return self._data.time()
-
-    def reset_simulation_time(self) -> None:
-        self._data = self._data.replace(time_ns=jnp.array(0, dtype=jnp.uint64))
-        assert self._data.time_ns == 0
-
-    def get_state(self) -> Union[npt.ArrayLike, npt.ArrayLike, npt.ArrayLike]:
         s = np.array(self._data.joint_positions())
         s_dot = np.array(self._data.joint_velocities())
         tau = np.array(self._tau)
 
         return s, s_dot, tau
 
-    def get_link_contact_forces(self) -> npt.ArrayLike:
+    def close(self) -> None:
+        pass
+
+    # ==== Properties and public methods ====
+
+    @property
+    def feet_wrench(self) -> npt.ArrayLike:
+        wrenches = self.get_link_contact_forces()
+
+        left_foot = np.array(wrenches[self._left_foot_link_idx])
+        right_foot = np.array(wrenches[self._right_foot_link_idx])
+        return left_foot, right_foot
+
+    @property
+    def base_transform(self) -> npt.ArrayLike:
+        return np.array(self._data.base_transform())
+
+    @property
+    def base_velocity(self) -> npt.ArrayLike:
+        return np.array(self._data.base_velocity())
+
+    @property
+    def simulation_time(self) -> float:
+        return self._data.time()
+
+    @property
+    def link_contact_forces(self) -> npt.ArrayLike:
+        if self._contact_model_type is ContactModelEnum.VISCO_ELASTIC:
+            raise ValueError(
+                "Link contact forces are only available for non visco-elastic contact models."
+            )
         return self._link_contact_forces
 
+    @property
     def total_mass(self) -> float:
         return js.model.total_mass(self._model)
 
-    def get_feet_positions(self) -> tuple[npt.ArrayLike, npt.ArrayLike]:
+    @property
+    def feet_positions(self) -> tuple[npt.ArrayLike, npt.ArrayLike]:
         W_p_lf = js.frame.transform(
             model=self._model,
             data=self._data,
@@ -341,13 +361,24 @@ class JaxsimSimulator(Simulator):
 
         return (W_p_lf, W_p_rf)
 
-    def get_com_position(self) -> npt.ArrayLike:
+    @property
+    def com_position(self) -> npt.ArrayLike:
         return js.com.com_position(self._model, self._data)
 
-    def close(self) -> None:
-        pass
+    def reset_simulation_time(self) -> None:
+        self._data = self._data.replace(time_ns=jnp.array(0, dtype=jnp.uint64))
+        assert self._data.time_ns == 0, "Failed to reset simulation time."
 
-    def RPY_to_quat(self, roll, pitch, yaw):
+    def update_contact_model_parameters(self, params: ContactsParams) -> None:
+        assert (
+            self._is_initialized
+        ), "Simulator is not initialized, call load_model first."
+
+        self._data = self._data.replace(contacts_params=params)
+
+    # ==== Private methods ====
+
+    def _RPY_to_quat(self, roll, pitch, yaw):
         cr = math.cos(roll / 2)
         cp = math.cos(pitch / 2)
         cy = math.cos(yaw / 2)
@@ -362,7 +393,7 @@ class JaxsimSimulator(Simulator):
 
         return [qw, qx, qy, qz]
 
-    def render(self):
+    def _render(self):
         if not self._viz:
             mjcf_string, assets = UrdfToMjcf.convert(
                 urdf=self._model.built_from,
@@ -389,7 +420,7 @@ class JaxsimSimulator(Simulator):
         )
         self._viz.sync(viewer=self._handle)
 
-    def record_frame(self):
+    def _record_frame(self):
         self._mj_model_helper.set_base_position(
             position=self._data.base_position(),
         )
@@ -403,22 +434,5 @@ class JaxsimSimulator(Simulator):
 
         self._recorder.record_frame()
 
-    def save_video(self, file_path: str | pathlib.Path):
+    def _save_video(self, file_path: str | pathlib.Path):
         self._recorder.write_video(path=file_path)
-
-    def set_terrain_parameters(self, terrain_params: npt.ArrayLike) -> None:
-        terrain_params_dict = dict(
-            zip(["max_penetration", "damping_ratio", "mu"], terrain_params)
-        )
-
-        logging.warning(f"Setting terrain parameters: {terrain_params_dict}")
-
-        contact_params = js.contact.estimate_good_soft_contacts_parameters(
-            model=self._model,
-            number_of_active_collidable_points_steady_state=16,
-            max_penetration=terrain_params_dict["max_penetration"],
-            damping_ratio=terrain_params_dict["damping_ratio"],
-            static_friction_coefficient=terrain_params_dict["mu"],
-        )
-
-        self._data = self._data.replace(contacts_params=contact_params)
