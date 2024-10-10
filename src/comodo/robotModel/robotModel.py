@@ -3,7 +3,7 @@ import numpy as np
 from urchin import URDF
 from urchin import Joint
 from urchin import Link
-from typing import Sequence
+from typing import Dict
 import mujoco
 import tempfile
 import xml.etree.ElementTree as ET
@@ -330,10 +330,28 @@ class RobotModel(KinDynComputations):
         robot_urdf_string_original = ET.tostring(root, encoding="unicode")
         return robot_urdf_string_original
 
-    def get_mujoco_model(self, floor_inclination: Sequence[float]) -> mujoco.MjModel:
-        if len(floor_inclination) != 3:
-            raise ValueError("Floor inclination must have 3 elements")
+    def get_mujoco_model(self, floor_opts: Dict) -> mujoco.MjModel:
+        valid_floor_opts = ["inclination_deg", "friction"]
+        for key in floor_opts.keys():
+            if key not in valid_floor_opts:
+                raise ValueError(f"Invalid key {key} in floor_opts. Valid keys are {valid_floor_opts}")
+            
+        floor_inclination_deg = floor_opts.get("inclination_deg", [0, 0, 0])
+        floor_friction = floor_opts.get("friction", 0.6)
+    
+        # Type & value checking
+        try:
+            floor_inclination = np.array(floor_inclination_deg)
+            floor_inclination = np.deg2rad(floor_inclination)
+        except:
+            raise ValueError(f"floor's inclination_deg must be a sequence of 3 elements, but got {floor_inclination_deg} of type {type(floor_inclination_deg)}")
 
+        if not isinstance(floor_friction, (int, float)):
+            raise TypeError(f"floor's friction must be a number, but got {floor_friction} of type {type(floor_friction)}")
+        if not (0 <= floor_friction <= 1):
+            raise ValueError(f"floor's friction must be a number between 0 and 1, but got {floor_friction}")
+        
+        # Get the URDF string
         urdf_string = self.get_mujoco_urdf_string()
         with open("temp.urdf", "w+") as f:
             f.write(urdf_string)
@@ -432,11 +450,12 @@ class RobotModel(KinDynComputations):
                 break
         floor = ET.Element("geom")
         floor.set("name", "floor")
-        floor.set("size", "0 0 .05")
+        floor.set("size", "0 0 .04")
         floor.set("type", "plane")
         floor.set("material", "grid")
         floor.set("condim", "3")
         floor.set("euler", "{} {} {}".format(*floor_inclination))
+        floor.set("friction", "{}".format(floor_friction))
         world_elem.append(floor)
         new_xml = ET.tostring(tree.getroot(), encoding="unicode")
         return new_xml
