@@ -2,6 +2,11 @@ from abc import ABC, abstractmethod
 import mujoco
 
 class Callback(ABC):
+    def __init__(self, *args, **kwargs) -> None:
+        self.args = args
+        self.kwargs = kwargs
+        self.simulator = None
+
     def set_simulator(self, simulator):
         self.simulator = simulator
 
@@ -10,7 +15,7 @@ class Callback(ABC):
         pass
 
     @abstractmethod
-    def on_simulation_step(self, t: float, data: mujoco.MjData) -> None:
+    def on_simulation_step(self, t: float, data: mujoco.MjData, *args) -> None:
         pass
 
     @abstractmethod
@@ -19,14 +24,16 @@ class Callback(ABC):
 
 
 class EarlyStoppingCallback(Callback):
-    def __init__(self, condition) -> None:
+    def __init__(self, condition, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+        self.score = 0
         self.condition = condition
 
     def on_simulation_start(self) -> None:
         pass
 
     def on_simulation_step(self, t: float, data: mujoco.MjData) -> None:
-        if self.condition(t, data):
+        if self.condition(t, data, *self.args, **self.kwargs):
             if self.simulator is not None:
                 self.simulator.should_stop = True
 
@@ -36,7 +43,8 @@ class EarlyStoppingCallback(Callback):
 
 
 class ScoreCallback(Callback):
-    def __init__(self, score_function) -> None:
+    def __init__(self, score_function, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
         self.score = 0
         self.history = []
         self.score_function = score_function
@@ -46,7 +54,7 @@ class ScoreCallback(Callback):
         self.history = []
 
     def on_simulation_step(self, t: float, data: mujoco.MjData) -> None:
-        score = self.score_function(t, data)
+        score = self.score_function(t, data, *self.args, **self.kwargs)
         self.score += score
         self.history.append(score)
 
@@ -56,6 +64,8 @@ class ScoreCallback(Callback):
 
 class TrackerCallback(Callback):
     def __init__(self, tracked_variables: list, print_values: bool = False) -> None:
+        super().__init__()
+        self.score = 0
         self.tracked_variables = tracked_variables
         self.print_values = print_values
 
@@ -65,7 +75,7 @@ class TrackerCallback(Callback):
     def on_simulation_start(self) -> None:
         pass
 
-    def on_simulation_step(self, t: float, data: mujoco.MjData) -> None:
+    def on_simulation_step(self, t: float, data: mujoco.MjData, *args) -> None:
         self.t.append(t)
         for var in self.tracked_variables:
             try:
