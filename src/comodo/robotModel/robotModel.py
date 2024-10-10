@@ -334,13 +334,15 @@ class RobotModel(KinDynComputations):
         return robot_urdf_string_original
 
     def get_mujoco_model(self, floor_opts: Dict, save_mjc_xml: bool = False) -> mujoco.MjModel:
-        valid_floor_opts = ["inclination_deg", "friction"]
+        valid_floor_opts = ["inclination_deg", "sliding_friction", "torsional_friction", "rolling_friction"]
         for key in floor_opts.keys():
             if key not in valid_floor_opts:
                 raise ValueError(f"Invalid key {key} in floor_opts. Valid keys are {valid_floor_opts}")
             
         floor_inclination_deg = floor_opts.get("inclination_deg", [0, 0, 0])
-        floor_friction = floor_opts.get("friction", 0.6)
+        sliding_friction = floor_opts.get("sliding_friction", 1)
+        torsional_friction = floor_opts.get("torsional_friction", 0.005)
+        rolling_friction = floor_opts.get("rolling_friction", 0.0001)
     
         # Type & value checking
         try:
@@ -349,10 +351,11 @@ class RobotModel(KinDynComputations):
         except:
             raise ValueError(f"floor's inclination_deg must be a sequence of 3 elements, but got {floor_inclination_deg} of type {type(floor_inclination_deg)}")
 
-        if not isinstance(floor_friction, (int, float)):
-            raise TypeError(f"floor's friction must be a number, but got {floor_friction} of type {type(floor_friction)}")
-        if not (0 <= floor_friction <= 1):
-            raise ValueError(f"floor's friction must be a number between 0 and 1, but got {floor_friction}")
+        for friction_coeff in ("sliding_friction", "torsional_friction", "rolling_friction"):
+            if not isinstance(eval(friction_coeff), (int, float)):
+                raise ValueError(f"{friction_coeff} must be a number (int, float), but got {type(eval(friction_coeff))}")
+            if not eval(f"0 <= {friction_coeff} <= 1"):
+                raise ValueError(f"{friction_coeff} must be in the range [0, 1], but got {eval(friction_coeff)}")
         
         # Get the URDF string
         urdf_string = self.get_mujoco_urdf_string()
@@ -455,7 +458,7 @@ class RobotModel(KinDynComputations):
         floor.set("material", "grid")
         floor.set("condim", "3")
         floor.set("euler", "{} {} {}".format(*floor_inclination))
-        floor.set("friction", "{}".format(floor_friction))
+        floor.set("friction", "{} {} {}".format(sliding_friction, torsional_friction, rolling_friction))
         world_elem.append(floor)
         new_xml = ET.tostring(tree.getroot(), encoding="unicode")
 
