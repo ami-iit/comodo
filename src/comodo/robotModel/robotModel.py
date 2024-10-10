@@ -1,5 +1,7 @@
 from adam.casadi.computations import KinDynComputations
 import numpy as np
+import pathlib
+from typing import Union
 from urchin import URDF
 from urchin import Joint
 from urchin import Link
@@ -17,7 +19,7 @@ from pathlib import Path
 class RobotModel(KinDynComputations):
     def __init__(
         self,
-        urdf_path: str,
+        urdf_path: Union[str, pathlib.Path, pathlib.PurePath, pathlib.PurePosixPath],
         robot_name: str,
         joint_name_list: list,
         base_link: str = "root",
@@ -77,9 +79,13 @@ class RobotModel(KinDynComputations):
             ]
         ),
     ) -> None:
+        valid_path_types = (str, pathlib.Path, pathlib.PurePath, pathlib.PurePosixPath)
+        if not isinstance(urdf_path, valid_path_types):
+            raise TypeError(f"urdf_path must be a string or a pathlib object, but got {type(urdf_path)}")
+
         self.collision_keyword = "_collision"
         self.visual_keyword = "_visual"
-        self.urdf_path = urdf_path
+        self.urdf_path = str(urdf_path)
         self.robot_name = robot_name
         self.joint_name_list = joint_name_list
         self.base_link = base_link
@@ -260,9 +266,6 @@ class RobotModel(KinDynComputations):
         tempFileOut = tempfile.NamedTemporaryFile(mode="w+")
         tempFileOut.write(copy.deepcopy(self.urdf_path))
 
-        with open(tempFileOut.name, "r") as file:
-            data = file.read()
-
         parser = ET.XMLParser(encoding="utf-8")
         tree = ET.parse(self.urdf_path, parser=parser)
         root = tree.getroot()
@@ -330,7 +333,7 @@ class RobotModel(KinDynComputations):
         robot_urdf_string_original = ET.tostring(root, encoding="unicode")
         return robot_urdf_string_original
 
-    def get_mujoco_model(self, floor_opts: Dict) -> mujoco.MjModel:
+    def get_mujoco_model(self, floor_opts: Dict, save_mjc_xml: bool = False) -> mujoco.MjModel:
         valid_floor_opts = ["inclination_deg", "friction"]
         for key in floor_opts.keys():
             if key not in valid_floor_opts:
@@ -353,9 +356,6 @@ class RobotModel(KinDynComputations):
         
         # Get the URDF string
         urdf_string = self.get_mujoco_urdf_string()
-        with open("temp.urdf", "w+") as f:
-            f.write(urdf_string)
-
         mujoco_model = mujoco.MjModel.from_xml_string(urdf_string)
         path_temp_xml = tempfile.NamedTemporaryFile(mode="w+")
         mujoco.mj_saveLastXML(path_temp_xml.name, mujoco_model)
@@ -458,6 +458,11 @@ class RobotModel(KinDynComputations):
         floor.set("friction", "{}".format(floor_friction))
         world_elem.append(floor)
         new_xml = ET.tostring(tree.getroot(), encoding="unicode")
+
+        if save_mjc_xml:
+            with open("./mujoco_model.xml", "w") as f:
+                f.write(new_xml)
+
         return new_xml
 
     def get_base_pose_from_contacts(self, s, contact_frames_pose: dict):

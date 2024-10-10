@@ -31,7 +31,7 @@ class MujocoSimulator(Simulator):
         """
 
         self.robot_model = robot_model        
-        mujoco_xml = robot_model.get_mujoco_model(floor_opts=floor_opts)
+        mujoco_xml = robot_model.get_mujoco_model(floor_opts=floor_opts, save_mjc_xml=False)
         self.model = mujoco.MjModel.from_xml_string(mujoco_xml)
         self.data = mujoco.MjData(self.model)
         self.create_mapping_vector_from_mujoco()
