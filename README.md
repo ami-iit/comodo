@@ -1,6 +1,6 @@
 # CoMoDO
 
-## Control Motion Design Optimization 
+## Control Motion Design Optimization
 
 Suite of parametrized controller and simulator for codesign of robots.
 
@@ -14,8 +14,9 @@ Suite of parametrized controller and simulator for codesign of robots.
 
 ---
 
-## Installation 
-This library depends on 
+## Installation
+
+This library depends on
 
 - [``casadi``](https://web.casadi.org/)
 - [``numpy``](https://numpy.org/)
@@ -27,14 +28,16 @@ This library depends on
 - [``matplotlib``](https://matplotlib.org/stable/)
 - [``urllib3``](https://urllib3.readthedocs.io/en/stable/)
 - [``urchin``](https://github.com/fishbotics/urchin)
+- [``jaxsim``](https://github.com/ami-iit/jaxsim)
 
 To install you can use the following commands
 
 
 ```
-conda create -n comododev -c conda-forge adam-robotics idyntree bipedal-locomotion-framework=0.19.0 mujoco mujoco-python numpy mujoco-python-viewer matplotlib urllib3 urchin resolve-robotics-uri-py notebook
+conda create -n comododev -c conda-forge adam-robotics bipedal-locomotion-framework=0.19.0 mujoco-python-viewer matplotlib urllib3 urchin notebook jaxsim
+
 conda activate comododev
-pip install --no-deps git+https://github.com/CarlottaSartore/urdf-modifiers.git@scalar_modification 
+pip install --no-deps git+https://github.com/CarlottaSartore/urdf-modifiers.git@scalar_modification
 pip install --no-deps -e .
 
 ```
