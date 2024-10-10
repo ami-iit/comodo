@@ -1,6 +1,7 @@
 from comodo.abstractClasses.simulator import Simulator
 from comodo.robotModel.robotModel import RobotModel
-from typing import Dict
+from comodo.mujocoSimulator.callbacks import Callback
+from typing import Dict, List
 import mujoco
 import math
 import numpy as np
@@ -41,6 +42,7 @@ class MujocoSimulator(Simulator):
         self.set_base_pose_in_mujoco(xyz_rpy=xyz_rpy)
         mujoco.mj_forward(self.model, self.data)
         self.visualize_robot_flag = False
+        self.should_stop = False
 
         self.Im = Im if not (Im is None) else np.zeros(self.robot_model.NDoF)
         self.kv_motors = (
@@ -563,3 +565,24 @@ class MujocoSimulator(Simulator):
 
         if self.visualize_robot_flag:
             self.viewer.close()
+
+    def run(self, tf: float,  callbacks: List[Callback] = []) -> None:
+        """
+        Run the simulation.
+        This method runs the simulation until the `should_stop` flag is set to True.
+        """
+
+        t = 0
+        for callback in callbacks:
+            callback.on_simulation_start()
+            callback.set_simulator(self)
+        while t < tf:
+            self.step()
+            t = self.get_simulation_time()
+            for callback in callbacks:
+                callback.on_simulation_step(t, self.data)
+            if self.should_stop:
+                break
+        for callback in callbacks:
+            callback.on_simulation_end()
+         

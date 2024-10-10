@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 import mujoco
 
 class Callback(ABC):
-    def __init__(self) -> None:
-        pass
+    def set_simulator(self, simulator):
+        self.simulator = simulator
 
     @abstractmethod
     def on_simulation_start(self) -> None:
@@ -18,6 +18,21 @@ class Callback(ABC):
         pass
 
 
+class EarlyStoppingCallback(Callback):
+    def __init__(self, condition) -> None:
+        self.condition = condition
+
+    def on_simulation_start(self) -> None:
+        pass
+
+    def on_simulation_step(self, t: float, data: mujoco.MjData) -> None:
+        if self.condition(t, data):
+            if self.simulator is not None:
+                self.simulator.should_stop = True
+
+    def on_simulation_end(self) -> None:
+        pass
+            
 
 
 class ScoreCallback(Callback):
@@ -39,7 +54,7 @@ class ScoreCallback(Callback):
         print(f"Final score: {self.score}")
 
 
-class TrackerCallback():
+class TrackerCallback(Callback):
     def __init__(self, tracked_variables: list, print_values: bool = False) -> None:
         self.tracked_variables = tracked_variables
         self.print_values = print_values
