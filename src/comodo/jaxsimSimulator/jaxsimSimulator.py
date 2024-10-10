@@ -273,7 +273,7 @@ class JaxsimSimulator(Simulator):
                     link_forces=None,
                 )
 
-                self.link_contact_forces = js.model.link_contact_forces(
+                self._link_contact_forces = js.model.link_contact_forces(
                     model=self._model,
                     data=self._data,
                     joint_force_references=self._tau,
@@ -316,7 +316,10 @@ class JaxsimSimulator(Simulator):
 
     @property
     def feet_wrench(self) -> npt.ArrayLike:
-        wrenches = self.get_link_contact_forces()
+        assert (
+            self._is_initialized
+        ), "Simulator is not initialized, call load_model first."
+        wrenches = self.link_contact_forces
 
         left_foot = np.array(wrenches[self._left_foot_link_idx])
         right_foot = np.array(wrenches[self._right_foot_link_idx])
@@ -324,18 +327,30 @@ class JaxsimSimulator(Simulator):
 
     @property
     def base_transform(self) -> npt.ArrayLike:
+        assert (
+            self._is_initialized
+        ), "Simulator is not initialized, call load_model first."
         return np.array(self._data.base_transform())
 
     @property
     def base_velocity(self) -> npt.ArrayLike:
+        assert (
+            self._is_initialized
+        ), "Simulator is not initialized, call load_model first."
         return np.array(self._data.base_velocity())
 
     @property
     def simulation_time(self) -> float:
+        assert (
+            self._is_initialized
+        ), "Simulator is not initialized, call load_model first."
         return self._data.time()
 
     @property
     def link_contact_forces(self) -> npt.ArrayLike:
+        assert (
+            self._is_initialized
+        ), "Simulator is not initialized, call load_model first."
         if self._contact_model_type is ContactModelEnum.VISCO_ELASTIC:
             raise ValueError(
                 "Link contact forces are only available for non visco-elastic contact models."
@@ -344,10 +359,16 @@ class JaxsimSimulator(Simulator):
 
     @property
     def total_mass(self) -> float:
+        assert (
+            self._is_initialized
+        ), "Simulator is not initialized, call load_model first."
         return js.model.total_mass(self._model)
 
     @property
     def feet_positions(self) -> tuple[npt.ArrayLike, npt.ArrayLike]:
+        assert (
+            self._is_initialized
+        ), "Simulator is not initialized, call load_model first."
         W_p_lf = js.frame.transform(
             model=self._model,
             data=self._data,
@@ -363,9 +384,15 @@ class JaxsimSimulator(Simulator):
 
     @property
     def com_position(self) -> npt.ArrayLike:
+        assert (
+            self._is_initialized
+        ), "Simulator is not initialized, call load_model first."
         return js.com.com_position(self._model, self._data)
 
     def reset_simulation_time(self) -> None:
+        assert (
+            self._is_initialized
+        ), "Simulator is not initialized, call load_model first."
         self._data = self._data.replace(time_ns=jnp.array(0, dtype=jnp.uint64))
         assert self._data.time_ns == 0, "Failed to reset simulation time."
 
