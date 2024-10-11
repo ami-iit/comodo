@@ -1,1 +1,1 @@
-from .jaxsimSimulator import JaxsimSimulator
+from .jaxsimSimulator import JaxsimSimulator, JaxsimContactModelEnum
