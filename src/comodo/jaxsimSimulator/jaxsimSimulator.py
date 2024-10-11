@@ -433,9 +433,10 @@ class JaxsimSimulator(Simulator):
 
     @property
     def link_contact_forces(self) -> npt.ArrayLike:
-        assert (
-            self._is_initialized
-        ), "Simulator is not initialized, call load_model first."
+        if self._link_contact_forces is None:
+            raise ValueError(
+                "Link contact forces are only available after calling the step method."
+            )
         if self._contact_model_type is JaxsimContactModelEnum.VISCO_ELASTIC:
             raise ValueError(
                 "Link contact forces are only available for non visco-elastic contact models."
