@@ -4,7 +4,7 @@ import logging
 import math
 import pathlib
 from enum import Enum
-from typing import Any, Optional, Tuple
+from typing import Any
 
 import jax.numpy as jnp
 import jaxsim
@@ -58,50 +58,50 @@ class JaxsimSimulator(Simulator):
         self._is_initialized: bool = False
 
         # Simulation data
-        self._data: Optional[js.data.JaxSimModelData] = None
+        self._data: js.data.JaxSimModelData | None = None
 
         # Simulation model
-        self._model: Optional[js.model.JaxSimModel] = None
+        self._model: js.model.JaxSimModel | None = None
 
         # Integrator (not used for visco-elastic contacts)
-        self._integrator: Optional[integrators.common.Integrator] = None
+        self._integrator: integrators.common.Integrator | None = None
 
         # Integrator state for the simulation (not used for visco-elastic contacts)
-        self._integrator_state: Optional[dict[str, Any]] = None
+        self._integrator_state: dict[str, Any] | None = None
 
         # Time step for the simulation
-        self._dt: Optional[float] = None
+        self._dt: float | None = None
 
         # Joint torques
-        self._tau: Optional[npt.ArrayLike] = None
+        self._tau: npt.ArrayLike | None = None
 
         # Link contact forces
-        self._link_contact_forces: Optional[npt.ArrayLike] = None
+        self._link_contact_forces: npt.ArrayLike | None = None
 
         # Contact model to use
         self._contact_model_type: ContactModelEnum = ContactModelEnum.RELAXED_RIGID
 
         # Index of the left foot link
-        self._left_foot_link_idx: Optional[int] = None
+        self._left_foot_link_idx: int | None = None
 
         # Index of the right foot link
-        self._right_foot_link_idx: Optional[int] = None
+        self._right_foot_link_idx: int | None = None
 
         # Index of the left foot sole frame
-        self._left_footsole_frame_idx: Optional[int] = None
+        self._left_footsole_frame_idx: int | None = None
 
         # Index of the right foot sole frame
-        self._right_footsole_frame_idx: Optional[int] = None
+        self._right_footsole_frame_idx: int | None = None
 
         # ==== Visualization attributes ====
         # Mode for visualization ('record', 'interactive', or None)
-        self._visualization_mode: Optional[str] = None
+        self._visualization_mode: str | None = None
 
         # Visualization object
-        self._viz: Optional[MujocoVisualizer] = None
+        self._viz: MujocoVisualizer | None = None
 
         # Recorder for video recording
-        self._recorder: Optional[MujocoVideoRecorder] = None
+        self._recorder: MujocoVideoRecorder | None = None
 
         # Frames per second for visualization
         self._viz_fps: int = 10
@@ -110,7 +110,7 @@ class JaxsimSimulator(Simulator):
         self._last_rendered_t_ns: float = 0.0
 
         # Optional Mujoco model helper
-        self._mj_model_helper: Optional[MujocoModelHelper] = None
+        self._mj_model_helper: MujocoModelHelper | None = None
 
     # ==== Simulator interface methods ====
 
@@ -121,13 +121,13 @@ class JaxsimSimulator(Simulator):
         dt: float = 0.001,
         xyz_rpy: npt.ArrayLike = np.zeros(6),
         contact_model_type: ContactModelEnum = ContactModelEnum.RELAXED_RIGID,
-        s: Optional[npt.ArrayLike] = None,
-        contact_params: Optional[ContactsParams] = None,
-        left_foot_link_name: Optional[str] = "l_ankle_2",
-        right_foot_link_name: Optional[str] = "r_ankle_2",
-        left_foot_sole_frame_name: Optional[str] = "l_sole",
-        right_foot_sole_frame_name: Optional[str] = "r_sole",
-        visualization_mode: Optional[str] = None,
+        s: npt.ArrayLike | None = None,
+        contact_params: ContactsParams | None = None,
+        left_foot_link_name: str | None = "l_ankle_2",
+        right_foot_link_name: str | None = "r_ankle_2",
+        left_foot_sole_frame_name: str | None = "l_sole",
+        right_foot_sole_frame_name: str | None = "r_sole",
+        visualization_mode: str | None = None,
     ) -> None:
         # ==== Initialize simulator model and data ====
 
@@ -298,7 +298,7 @@ class JaxsimSimulator(Simulator):
                 case None:
                     pass
 
-    def get_state(self) -> Tuple[npt.ArrayLike, npt.ArrayLike, npt.ArrayLike]:
+    def get_state(self) -> tuple[npt.ArrayLike, npt.ArrayLike, npt.ArrayLike]:
         assert (
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
