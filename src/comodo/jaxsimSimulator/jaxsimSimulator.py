@@ -16,14 +16,15 @@ from jaxsim.mujoco import MujocoVideoRecorder
 from jaxsim.mujoco.loaders import UrdfToMjcf
 from jaxsim.mujoco.model import MujocoModelHelper
 from jaxsim.mujoco.visualizer import MujocoVisualizer
-from jaxsim.rbda.contacts.common import ContactsParams
-from jaxsim.rbda.contacts.soft import SoftContacts
-from jaxsim.rbda.contacts.relaxed_rigid import (
+from jaxsim.rbda.contacts import (
+    ContactsParams,
+    SoftContacts,
     RelaxedRigidContacts,
     RelaxedRigidContactsParams,
+    RigidContacts,
+    RigidContactsParams,
+    ViscoElasticContacts,
 )
-from jaxsim.rbda.contacts.rigid import RigidContacts, RigidContactsParams
-from jaxsim.rbda.contacts.visco_elastic import ViscoElasticContacts
 
 from comodo.abstractClasses.simulator import Simulator
 from comodo.robotModel.robotModel import RobotModel
@@ -72,6 +73,9 @@ class JaxsimSimulator(Simulator):
         # Time step for the simulation
         self._dt: float | None = None
 
+        # Simulation time (seconds)
+        self._t: float = 0.0
+
         # Joint torques
         self._tau: npt.ArrayLike | None = None
 
@@ -114,8 +118,8 @@ class JaxsimSimulator(Simulator):
         # Frames per second for visualization
         self._viz_fps: int = 10
 
-        # Last rendered time in nanoseconds
-        self._last_rendered_t_ns: float = 0.0
+        # Last rendered time (seconds)
+        self._last_rendered_t: float = 0.0
 
         # Optional Mujoco model helper
         self._mj_model_helper: MujocoModelHelper | None = None
@@ -159,6 +163,7 @@ class JaxsimSimulator(Simulator):
         # ==== Initialize simulator model and data ====
 
         self._dt = dt
+        self._t = 0.0
         self._contact_model_type = contact_model_type
 
         match contact_model_type:
@@ -223,7 +228,7 @@ class JaxsimSimulator(Simulator):
         )
 
         if contact_model_type is not JaxsimContactModelEnum.VISCO_ELASTIC:
-            self._integrator = integrators.fixed_step.RungeKutta4.build(
+            self._integrator = integrators.fixed_step.Heun2.build(
                 dynamics=js.ode.wrap_system_dynamics_for_integration(
                     model=self._model,
                     data=self._data,
@@ -296,11 +301,13 @@ class JaxsimSimulator(Simulator):
 
         self._tau = jnp.array(input)[self._to_js]
 
-    def step(self, n_step: int = 1) -> None:
+    def step(self, n_step: int = 1, dry_run=False) -> None:
         """Step the simulation forward by n_step steps.
 
         Args:
             n_step: number of steps to simulate.
+            dry_run: If True, the simulation will not advance the state of the
+                simulator and will not trigger any visualization.
         """
 
         assert (
@@ -329,26 +336,29 @@ class JaxsimSimulator(Simulator):
                     link_forces=None,
                 )
 
-            current_time_ns = self._data.time_ns.astype(int)
+            if not dry_run:
+                # Advance simulation time
+                self._t += self._dt
 
-            match self._visualization_mode:
-                case "record":
-                    if current_time_ns - self._last_rendered_t_ns >= int(
-                        1e9 / self._recorder.fps
-                    ):
-                        self._record_frame()
-                        self._last_rendered_t_ns = current_time_ns
+                # Render visualization
+                match self._visualization_mode:
+                    case "record":
+                        if self._t - self._last_rendered_t >= (1 / self._recorder.fps):
+                            self._record_frame()
+                            self._last_rendered_t = self._t
 
-                case "interactive":
-                    if current_time_ns - self._last_rendered_t_ns >= int(
-                        1e9 / self._viz_fps
-                    ):
-                        self._render()
-                        self._last_rendered_t_ns = current_time_ns
-                case None:
-                    pass
+                    case "interactive":
+                        if self._t - self._last_rendered_t >= (1 / self._viz_fps):
+                            self._render()
+                            self._last_rendered_t = self._t
+                    case None:
+                        pass
 
-        if self._contact_model_type is not JaxsimContactModelEnum.VISCO_ELASTIC:
+        # Update link contact forces
+        if (
+            not dry_run
+            and self._contact_model_type is not JaxsimContactModelEnum.VISCO_ELASTIC
+        ):
             self._link_contact_forces = js.model.link_contact_forces(
                 model=self._model,
                 data=self._data,
@@ -419,7 +429,7 @@ class JaxsimSimulator(Simulator):
         assert (
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
-        return self._data.time()
+        return self._t
 
     @property
     def link_contact_forces(self) -> npt.ArrayLike:
@@ -478,12 +488,12 @@ class JaxsimSimulator(Simulator):
         ), "Simulator is not initialized, call load_model first."
         return js.com.com_position(self._model, self._data)
 
+    @property
+    def contact_model_type(self) -> JaxsimContactModelEnum:
+        return self._contact_model_type
+
     def reset_simulation_time(self) -> None:
-        assert (
-            self._is_initialized
-        ), "Simulator is not initialized, call load_model first."
-        self._data = self._data.replace(time_ns=jnp.array(0, dtype=jnp.uint64))
-        assert self._data.time_ns == 0, "Failed to reset simulation time."
+        self._t = 0.0
 
     def update_contact_model_parameters(self, params: ContactsParams) -> None:
         assert (
