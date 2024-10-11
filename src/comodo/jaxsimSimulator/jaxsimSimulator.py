@@ -45,11 +45,11 @@ console_handler.setFormatter(formatter)
 logger.addHandler(console_handler)
 
 
-class ContactModelEnum(Enum):
-    RIGID = "rigid"
-    RELAXED_RIGID = "relaxed_rigid"
-    VISCO_ELASTIC = "visco_elastic"
-    SOFT = "soft"
+class ContactModelEnum(enum.IntEnum):
+    RIGID = enum.auto()
+    RELAXED_RIGID = enum.auto()
+    VISCO_ELASTIC = enum.auto()
+    SOFT = enum.auto()
 
 
 class JaxsimSimulator(Simulator):
@@ -152,12 +152,10 @@ class JaxsimSimulator(Simulator):
             contact_model=contact_model,
         )
 
-        model = js.model.reduce(
+        self._model = js.model.reduce(
             model=model,
             considered_joints=robot_model.joint_name_list,
         )
-
-        self._model = model
 
         if contact_params is None:
             match contact_model_type:
@@ -405,7 +403,7 @@ class JaxsimSimulator(Simulator):
 
     # ==== Private methods ====
 
-    def _RPY_to_quat(self, roll, pitch, yaw):
+    def _RPY_to_quat(self, roll, pitch, yaw) -> list[float, float, float, float]:
         cr = math.cos(roll / 2)
         cp = math.cos(pitch / 2)
         cy = math.cos(yaw / 2)
@@ -420,7 +418,7 @@ class JaxsimSimulator(Simulator):
 
         return [qw, qx, qy, qz]
 
-    def _render(self):
+    def _render(self) -> None:
         if not self._viz:
             mjcf_string, assets = UrdfToMjcf.convert(
                 urdf=self._model.built_from,
@@ -447,7 +445,7 @@ class JaxsimSimulator(Simulator):
         )
         self._viz.sync(viewer=self._handle)
 
-    def _record_frame(self):
+    def _record_frame(self) -> None:
         self._mj_model_helper.set_base_position(
             position=self._data.base_position(),
         )
@@ -461,5 +459,5 @@ class JaxsimSimulator(Simulator):
 
         self._recorder.record_frame()
 
-    def _save_video(self, file_path: str | pathlib.Path):
+    def _save_video(self, file_path: str | pathlib.Path) -> None:
         self._recorder.write_video(path=file_path)
