@@ -59,7 +59,7 @@ class ScoreCallback(Callback):
         self.history.append(score)
 
     def on_simulation_end(self) -> None:
-        print(f"Final score: {self.score}")
+        pass
 
 
 class TrackerCallback(Callback):
