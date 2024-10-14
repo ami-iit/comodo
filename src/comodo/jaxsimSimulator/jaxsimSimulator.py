@@ -424,7 +424,8 @@ class JaxsimSimulator(Simulator):
         assert (
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
-        return np.array(self._data.base_velocity())
+        with self._data.switch_velocity_representation(VelRepr.Mixed):
+            return np.array(self._data.base_velocity())
 
     @property
     def simulation_time(self) -> float:
