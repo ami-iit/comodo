@@ -567,7 +567,7 @@ class MujocoSimulator(Simulator):
         if self.visualize_robot_flag:
             self.viewer.close()
 
-    def run(self, tf: float,  callbacks: List[Callback] = []) -> None:
+    def run(self, tf: float,  callbacks: List[Callback] = [], visualise: bool = False) -> None:
         """
         Run the simulation.
         This method runs the simulation until the `should_stop` flag is set to True.
@@ -577,6 +577,7 @@ class MujocoSimulator(Simulator):
         for callback in callbacks:
             callback.on_simulation_start()
             callback.set_simulator(self)
+        self.set_visualize_robot_flag(visualise)
         while t < tf:
             self.step()
             t = self.get_simulation_time()
