@@ -14,6 +14,7 @@ class MujocoSimulator(Simulator):
     def __init__(self) -> None:
         self.desired_pos = None
         self.postion_control = False
+        self.should_stop = False
         self.compute_misalignment_gravity_fun()
         super().__init__()
 

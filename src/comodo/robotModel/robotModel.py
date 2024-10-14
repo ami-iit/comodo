@@ -359,7 +359,12 @@ class RobotModel(KinDynComputations):
         
         # Get the URDF string
         urdf_string = self.get_mujoco_urdf_string()
-        mujoco_model = mujoco.MjModel.from_xml_string(urdf_string)
+        try:
+            mujoco_model = mujoco.MjModel.from_xml_string(urdf_string)
+        except Exception as e:
+            with tempfile.NamedTemporaryFile(mode="w+", delete=False) as file:
+                file.write(urdf_string)
+            raise ValueError(f"Error while creating the Mujoco model from the URDF string: {e}. Urdf string dumped to {file.name}")
         path_temp_xml = tempfile.NamedTemporaryFile(mode="w+")
         mujoco.mj_saveLastXML(path_temp_xml.name, mujoco_model)
 
