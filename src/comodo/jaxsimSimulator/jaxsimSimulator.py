@@ -196,7 +196,7 @@ class JaxsimSimulator(Simulator):
                 case JaxsimContactModelEnum.RELAXED_RIGID:
                     contact_params = RelaxedRigidContactsParams.build(mu=0.005)
                 case JaxsimContactModelEnum.VISCO_ELASTIC | JaxsimContactModelEnum.SOFT:
-                    contact_params = js.contact.estimate_good_soft_contacts_parameters(
+                    contact_params = js.contact.estimate_good_contact_parameters(
                         model=self._model,
                         number_of_active_collidable_points_steady_state=16,
                         max_penetration=0.002,
@@ -222,7 +222,7 @@ class JaxsimSimulator(Simulator):
             model=self._model,
             velocity_representation=VelRepr.Mixed,
             base_position=jnp.array(xyz_rpy[:3]),
-            base_quaternion=jnp.array(self._RPY_to_quat(*xyz_rpy[3:])),
+            base_quaternion=jnp.array(JaxsimSimulator._RPY_to_quat(*xyz_rpy[3:])),
             joint_positions=jnp.array(s),
             contacts_params=contact_params,
         )
@@ -359,11 +359,12 @@ class JaxsimSimulator(Simulator):
             not dry_run
             and self._contact_model_type is not JaxsimContactModelEnum.VISCO_ELASTIC
         ):
-            self._link_contact_forces = js.model.link_contact_forces(
-                model=self._model,
-                data=self._data,
-                joint_force_references=self._tau,
-            )
+            with self._data.switch_velocity_representation(VelRepr.Mixed):
+                self._link_contact_forces = js.model.link_contact_forces(
+                    model=self._model,
+                    data=self._data,
+                    joint_force_references=self._tau,
+                )
 
     def get_state(self) -> tuple[npt.ArrayLike, npt.ArrayLike, npt.ArrayLike]:
         """
@@ -396,6 +397,7 @@ class JaxsimSimulator(Simulator):
 
     @property
     def feet_wrench(self) -> npt.ArrayLike:
+        # TODO: remove this check as soon as Jaxsim adds support for it
         if self._contact_model_type is JaxsimContactModelEnum.VISCO_ELASTIC:
             raise ValueError(
                 "Link contact forces are only available for non visco-elastic contact models."
@@ -437,6 +439,7 @@ class JaxsimSimulator(Simulator):
             raise ValueError(
                 "Link contact forces are only available after calling the step method."
             )
+        # TODO: remove this check as soon as Jaxsim adds support for it
         if self._contact_model_type is JaxsimContactModelEnum.VISCO_ELASTIC:
             raise ValueError(
                 "Link contact forces are only available for non visco-elastic contact models."
@@ -505,7 +508,8 @@ class JaxsimSimulator(Simulator):
 
     # ==== Private methods ====
 
-    def _RPY_to_quat(self, roll, pitch, yaw) -> list[float, float, float, float]:
+    @staticmethod
+    def _RPY_to_quat(roll, pitch, yaw) -> list[float, float, float, float]:
         cr = math.cos(roll / 2)
         cp = math.cos(pitch / 2)
         cy = math.cos(yaw / 2)
