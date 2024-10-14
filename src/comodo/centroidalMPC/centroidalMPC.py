@@ -78,7 +78,7 @@ class CentroidalMPC(Planner):
             "contact_force_symmetry_weight",
             mpc_parameters.contact_force_symmetry_weight,
         )
-        self.mpc_param_handler.set_parameter_int("verbosity", 0)
+        self.mpc_param_handler.set_parameter_int("solver_verbosity", 0)
         self.mpc_param_handler.set_parameter_int("number_of_maximum_contacts", 2)
         self.mpc_param_handler.set_parameter_int("number_of_slices", 1)
         self.mpc_param_handler.set_parameter_float("static_friction_coefficient", 0.33)
