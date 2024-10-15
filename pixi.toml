@@ -1,0 +1,51 @@
+[project]
+authors = ["Carlotta Sartore <carlotta.sartore@iit.it>"]
+channels = ["conda-forge"]
+description = "Suite of parametrized controller with simulation environments for co-design of Humanoid Robots"
+name = "comodo"
+platforms = ["linux-64"]
+version = "0.0.0"
+repository = "https://github.com/ami-iit/comodo"
+readme = "README.md"
+license-file = "LICENSE"
+
+[tasks]
+
+[dependencies]
+bipedal-locomotion-framework = ">=0.19.0,<0.20"
+manifpy = ">=0.0.5,<0.0.6"
+casadi = ">=3.6.7,<4"
+idyntree = ">=13.0.0,<14"
+matplotlib = ">=3.9.2,<4"
+urllib3 = ">=2.2.3,<3"
+urchin = ">=0.0.27,<0.0.28"
+mesalib = ">=24.2.4,<25"
+notebook = ">=7.2.2,<8"
+ipykernel = ">=6.29.5,<7"
+
+[pypi-dependencies]
+# TODO: move adam-robotics package to conda dependencies as soon as PR https://github.com/ami-iit/adam/pull/100 is merged
+adam-robotics = { git = "https://github.com/flferretti/ADAM.git", rev = "flferretti-patch-1" }
+urdfmodifiers = { git = "https://github.com/CarlottaSartore/urdf-modifiers.git", rev = "scalar_modification" }
+comodo = { path = ".", editable = true }
+
+[feature.jaxsim.dependencies]
+jaxsim = ">=0.4.2,<0.5"
+resolve-robotics-uri-py = "*"
+
+[feature.mujoco.dependencies]
+mujoco = ">=3.2.0,<4"
+mujoco-python-viewer = ">=0.1.4,<0.2"
+
+[feature.drake.pypi-dependencies]
+# drake = "*"
+
+[feature.drake.dependencies]
+meshio = "*"
+tqdm = "*"
+
+[environments]
+jaxsim = ["jaxsim"]
+mujoco = ["mujoco"]
+drake = ["drake"]
+all = ["jaxsim", "mujoco", "drake"]
