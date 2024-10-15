@@ -22,6 +22,7 @@ urchin = ">=0.0.27,<0.0.28"
 mesalib = ">=24.2.4,<25"
 notebook = ">=7.2.2,<8"
 ipykernel = ">=6.29.5,<7"
+resolve-robotics-uri-py = ">=0.3.0,<0.4"
 
 [pypi-dependencies]
 # TODO: move adam-robotics package to conda dependencies as soon as PR https://github.com/ami-iit/adam/pull/100 is merged
@@ -31,7 +32,6 @@ comodo = { path = ".", editable = true }
 
 [feature.jaxsim.dependencies]
 jaxsim = ">=0.4.2,<0.5"
-resolve-robotics-uri-py = "*"
 
 [feature.mujoco.dependencies]
 mujoco = ">=3.2.0,<4"
