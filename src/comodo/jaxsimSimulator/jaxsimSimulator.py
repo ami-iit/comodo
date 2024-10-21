@@ -17,7 +17,7 @@ from jaxsim.mujoco.loaders import UrdfToMjcf
 from jaxsim.mujoco.model import MujocoModelHelper
 from jaxsim.mujoco.visualizer import MujocoVisualizer
 from jaxsim.rbda.contacts import (
-    ContactsParams,
+    ContactParamsTypes,
     SoftContacts,
     RelaxedRigidContacts,
     RelaxedRigidContactsParams,
@@ -134,7 +134,7 @@ class JaxsimSimulator(Simulator):
         xyz_rpy: npt.ArrayLike = np.zeros(6),
         contact_model_type: JaxsimContactModelEnum = JaxsimContactModelEnum.RELAXED_RIGID,
         s: npt.ArrayLike | None = None,
-        contact_params: ContactsParams | None = None,
+        contact_params: ContactParamsTypes | None = None,
         left_foot_link_name: str | None = "l_ankle_2",
         right_foot_link_name: str | None = "r_ankle_2",
         left_foot_sole_frame_name: str | None = "l_sole",
@@ -500,7 +500,7 @@ class JaxsimSimulator(Simulator):
     def reset_simulation_time(self) -> None:
         self._t = 0.0
 
-    def update_contact_model_parameters(self, params: ContactsParams) -> None:
+    def update_contact_model_parameters(self, params: ContactParamsTypes) -> None:
         assert (
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
