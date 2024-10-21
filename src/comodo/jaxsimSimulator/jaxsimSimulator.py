@@ -196,7 +196,7 @@ class JaxsimSimulator(Simulator):
                 case JaxsimContactModelEnum.RELAXED_RIGID:
                     contact_params = RelaxedRigidContactsParams.build(mu=0.005)
                 case JaxsimContactModelEnum.VISCO_ELASTIC | JaxsimContactModelEnum.SOFT:
-                    contact_params = js.contact.estimate_good_soft_contacts_parameters(
+                    contact_params = js.contact.estimate_good_contact_parameters(
                         model=self._model,
                         number_of_active_collidable_points_steady_state=16,
                         max_penetration=0.002,
