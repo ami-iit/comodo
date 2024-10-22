@@ -199,8 +199,8 @@ class JaxsimSimulator(Simulator):
                 case JaxsimContactModelEnum.VISCO_ELASTIC | JaxsimContactModelEnum.SOFT:
                     contact_params = js.contact.estimate_good_contact_parameters(
                         model=self._model,
-                        number_of_active_collidable_points_steady_state=16,
-                        max_penetration=0.002,
+                        number_of_active_collidable_points_steady_state=8,
+                        max_penetration=0.002_5,
                         damping_ratio=1.0,
                         static_friction_coefficient=1.0,
                     )
@@ -363,11 +363,10 @@ class JaxsimSimulator(Simulator):
                         pass
 
         # Update link contact forces
-        if (
-            not dry_run
-            and self._contact_model_type is not JaxsimContactModelEnum.VISCO_ELASTIC
-        ):
+        if not dry_run:
+
             with self._data.switch_velocity_representation(VelRepr.Mixed):
+
                 self._link_contact_forces = js.model.link_contact_forces(
                     model=self._model,
                     data=self._data,
@@ -405,15 +404,12 @@ class JaxsimSimulator(Simulator):
 
     @property
     def feet_wrench(self) -> tuple[npt.NDArray, npt.NDArray]:
-        # TODO: remove this check as soon as Jaxsim adds support for it
-        if self._contact_model_type is JaxsimContactModelEnum.VISCO_ELASTIC:
-            raise ValueError(
-                "Link contact forces are only available for non visco-elastic contact models."
-            )
+
         if self._link_contact_forces is None:
             raise ValueError(
                 "Link contact forces are only available after calling the step method."
             )
+
         wrenches = self.link_contact_forces
 
         left_foot = np.array(wrenches[self._left_foot_link_idx])
@@ -444,15 +440,12 @@ class JaxsimSimulator(Simulator):
 
     @property
     def link_contact_forces(self) -> npt.NDArray:
+
         if self._link_contact_forces is None:
             raise ValueError(
                 "Link contact forces are only available after calling the step method."
             )
-        # TODO: remove this check as soon as Jaxsim adds support for it
-        if self._contact_model_type is JaxsimContactModelEnum.VISCO_ELASTIC:
-            raise ValueError(
-                "Link contact forces are only available for non visco-elastic contact models."
-            )
+
         return self._link_contact_forces
 
     @property
