@@ -1,10 +1,12 @@
+from datetime import timedelta
+
+import bipedal_locomotion_framework as blf
+import idyntree.bindings as iDynTree
+import matplotlib.pyplot as plt
+import numpy as np
+
 from comodo.abstractClasses.planner import Planner
 from comodo.centroidalMPC.footPositionPlanner import FootPositionPlanner
-import bipedal_locomotion_framework as blf
-from datetime import timedelta
-import idyntree.bindings as iDynTree
-import numpy as np
-import matplotlib.pyplot as plt
 from comodo.centroidalMPC.mpcParameterTuning import MPCParameterTuning
 
 
