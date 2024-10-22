@@ -54,7 +54,11 @@ class JaxsimContactModelEnum(enum.IntEnum):
 
 
 class JaxsimSimulator(Simulator):
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        dt: float = 0.001,
+        contact_model_type: JaxsimContactModelEnum = JaxsimContactModelEnum.RELAXED_RIGID,
+    ) -> None:
         # Flag to check if the simulator is initialized
         self._is_initialized: bool = False
 
@@ -71,7 +75,7 @@ class JaxsimSimulator(Simulator):
         self._integrator_state: dict[str, Any] | None = None
 
         # Time step for the simulation
-        self._dt: float | None = None
+        self._dt: float = dt
 
         # Simulation time (seconds)
         self._t: float = 0.0
@@ -83,9 +87,7 @@ class JaxsimSimulator(Simulator):
         self._link_contact_forces: npt.ArrayLike | None = None
 
         # Contact model to use
-        self._contact_model_type: JaxsimContactModelEnum = (
-            JaxsimContactModelEnum.RELAXED_RIGID
-        )
+        self._contact_model_type: JaxsimContactModelEnum = contact_model_type
 
         # Index of the left foot link
         self._left_foot_link_idx: int | None = None
@@ -130,9 +132,7 @@ class JaxsimSimulator(Simulator):
         self,
         robot_model: RobotModel,
         *,
-        dt: float = 0.001,
         xyz_rpy: npt.ArrayLike = np.zeros(6),
-        contact_model_type: JaxsimContactModelEnum = JaxsimContactModelEnum.RELAXED_RIGID,
         s: npt.ArrayLike | None = None,
         contact_params: ContactParamsTypes | None = None,
         left_foot_link_name: str | None = "l_ankle_2",
@@ -162,11 +162,9 @@ class JaxsimSimulator(Simulator):
         """
         # ==== Initialize simulator model and data ====
 
-        self._dt = dt
         self._t = 0.0
-        self._contact_model_type = contact_model_type
 
-        match contact_model_type:
+        match self._contact_model_type:
             case JaxsimContactModelEnum.RIGID:
                 contact_model = RigidContacts.build()
             case JaxsimContactModelEnum.RELAXED_RIGID:
@@ -176,7 +174,9 @@ class JaxsimSimulator(Simulator):
             case JaxsimContactModelEnum.SOFT:
                 contact_model = SoftContacts.build()
             case _:
-                raise ValueError(f"Invalid contact model type: {contact_model_type}")
+                raise ValueError(
+                    f"Invalid contact model type: {self._contact_model_type}"
+                )
 
         model = js.model.JaxSimModel.build_from_model_description(
             model_description=robot_model.urdf_string,
@@ -190,7 +190,7 @@ class JaxsimSimulator(Simulator):
         )
 
         if contact_params is None:
-            match contact_model_type:
+            match self._contact_model_type:
                 case JaxsimContactModelEnum.RIGID:
                     contact_params = RigidContactsParams.build(mu=0.5, K=1.0e4, D=1.0e2)
                 case JaxsimContactModelEnum.RELAXED_RIGID:
@@ -205,7 +205,7 @@ class JaxsimSimulator(Simulator):
                     )
                 case _:
                     raise ValueError(
-                        f"Invalid contact model type: {contact_model_type}"
+                        f"Invalid contact model type: {self._contact_model_type}"
                     )
 
         # Find mapping between user provided joint name list and JaxSim one
@@ -227,7 +227,7 @@ class JaxsimSimulator(Simulator):
             contacts_params=contact_params,
         )
 
-        if contact_model_type is not JaxsimContactModelEnum.VISCO_ELASTIC:
+        if self._contact_model_type is not JaxsimContactModelEnum.VISCO_ELASTIC:
             self._integrator = integrators.fixed_step.Heun2.build(
                 dynamics=js.ode.wrap_system_dynamics_for_integration(
                     model=self._model,
