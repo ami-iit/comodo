@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import enum
 import logging
 import math
 import pathlib
-import enum
 from typing import Any
 
 import jax.numpy as jnp
@@ -16,15 +16,6 @@ from jaxsim.mujoco import MujocoVideoRecorder
 from jaxsim.mujoco.loaders import UrdfToMjcf
 from jaxsim.mujoco.model import MujocoModelHelper
 from jaxsim.mujoco.visualizer import MujocoVisualizer
-from jaxsim.rbda.contacts import (
-    ContactParamsTypes,
-    SoftContacts,
-    RelaxedRigidContacts,
-    RelaxedRigidContactsParams,
-    RigidContacts,
-    RigidContactsParams,
-    ViscoElasticContacts,
-)
 
 from comodo.abstractClasses.simulator import Simulator
 from comodo.robotModel.robotModel import RobotModel
