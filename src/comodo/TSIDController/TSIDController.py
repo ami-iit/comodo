@@ -444,6 +444,10 @@ class TSIDController(Controller):
             left_contact=left_foot_desired.is_in_contact,
             right_contact=right_foot_desired.is_in_contact,
         )
+
+        # Regularize the joints with the desired positions
+        self.joint_regularization_task.set_set_point(s_desired)
+
         self.joint_regularization_task.set_set_point(s_desired)
         # self.angular_momentum_task.set_set_point(np.zeros(3), np.zeros(3))
         wrench_desired_left = np.zeros(6)
