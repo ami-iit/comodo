@@ -67,7 +67,7 @@ class CentroidalMPC(Planner):
         self.H_b = H_b
         self.kindyn.setRobotState(self.H_b, self.s, self.w_b, self.s_dot, self.gravity)
 
-    def intialize_mpc(self, mpc_parameters: MPCParameterTuning):
+    def intialize_mpc(self, mpc_parameters: MPCParameterTuning, scale: float = 1.0):
         time_horizon = timedelta(seconds=1.2)
 
         ## MPC Param Hanlder
@@ -90,12 +90,18 @@ class CentroidalMPC(Planner):
         self.contact_0_handler = blf.parameters_handler.StdParametersHandler()
         self.contact_0_handler.set_parameter_int("number_of_corners", 4)
         self.contact_0_handler.set_parameter_string("contact_name", "left_foot")
-        self.contact_0_handler.set_parameter_vector_float("corner_0",self.robot_model.corner_0)
-        self.contact_0_handler.set_parameter_vector_float("corner_1", self.robot_model.corner_1)
         self.contact_0_handler.set_parameter_vector_float(
-            "corner_2", self.robot_model.corner_2
+            "corner_0", scale * self.robot_model.corner_0
         )
-        self.contact_0_handler.set_parameter_vector_float("corner_3", self.robot_model.corner_3)
+        self.contact_0_handler.set_parameter_vector_float(
+            "corner_1", scale * self.robot_model.corner_1
+        )
+        self.contact_0_handler.set_parameter_vector_float(
+            "corner_2", scale * self.robot_model.corner_2
+        )
+        self.contact_0_handler.set_parameter_vector_float(
+            "corner_3", scale * self.robot_model.corner_3
+        )
         self.contact_0_handler.set_parameter_vector_float(
             "bounding_box_lower_limit", [0.0, 0.0, 0.0]
         )
@@ -106,12 +112,18 @@ class CentroidalMPC(Planner):
         self.contact_1_handler = blf.parameters_handler.StdParametersHandler()
         self.contact_1_handler.set_parameter_int("number_of_corners", 4)
         self.contact_1_handler.set_parameter_string("contact_name", "right_foot")
-        self.contact_1_handler.set_parameter_vector_float("corner_0", self.robot_model.corner_0)
-        self.contact_1_handler.set_parameter_vector_float("corner_1", self.robot_model.corner_1)
         self.contact_1_handler.set_parameter_vector_float(
-            "corner_2", self.robot_model.corner_2
+            "corner_0", scale * self.robot_model.corner_0
         )
-        self.contact_1_handler.set_parameter_vector_float("corner_3", self.robot_model.corner_3)
+        self.contact_1_handler.set_parameter_vector_float(
+            "corner_1", scale * self.robot_model.corner_1
+        )
+        self.contact_1_handler.set_parameter_vector_float(
+            "corner_2", scale * self.robot_model.corner_2
+        )
+        self.contact_1_handler.set_parameter_vector_float(
+            "corner_3", scale * self.robot_model.corner_3
+        )
         self.contact_1_handler.set_parameter_vector_float(
             "bounding_box_lower_limit", [0.0, 0.0, 0.0]
         )
