@@ -1,22 +1,42 @@
 from comodo.abstractClasses.simulator import Simulator
 from comodo.robotModel.robotModel import RobotModel
 from comodo.mujocoSimulator.callbacks import Callback
+from comodo.mujocoSimulator.mjcontactinfo import MjContactInfo
 from typing import Dict, List
 import mujoco
 import math
 import numpy as np
 import mujoco_viewer
 import copy
+import logging
+import pathlib
 import casadi as cs
 
 
 class MujocoSimulator(Simulator):
-    def __init__(self) -> None:
+    def __init__(self, logger: logging.Logger = None, log_dir: str = "") -> None:
         self.desired_pos = None
         self.postion_control = False
         self.should_stop = False
+        self.t = 0
+        self.iter = 0
+        self.contacts = []
+        self._setup_logger(logger, log_dir)
         self.compute_misalignment_gravity_fun()
         super().__init__()
+
+    def _setup_logger(self, logger: logging.Logger, log_dir) -> None:
+        if logger is None:
+            self.logger = logging.getLogger(__name__)
+            self.logger.setLevel(logging.INFO)
+            ch = logging.StreamHandler()
+            ch.setLevel(logging.INFO)
+            FMT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            fmt = logging.Formatter(fmt=FMT)
+            ch.setFormatter(fmt=fmt)
+            self.logger.addHandler(ch)
+        else:
+            self.logger = logger
 
     def load_model(self, robot_model: RobotModel, s, xyz_rpy, kv_motors=None, Im=None, floor_opts: Dict = {}) -> None:
         """
@@ -267,7 +287,7 @@ class MujocoSimulator(Simulator):
             mujoco.mj_step(self.model, self.data, n_step)
             mujoco.mj_step1(self.model, self.data)
             mujoco.mj_forward(self.model, self.data)
-
+  
         if self.visualize_robot_flag:
             self.viewer.render()
 
@@ -573,18 +593,39 @@ class MujocoSimulator(Simulator):
         This method runs the simulation until the `should_stop` flag is set to True.
         """
 
-        t = 0
+        self.reset()
         for callback in callbacks:
             callback.on_simulation_start()
             callback.set_simulator(self)
         self.set_visualize_robot_flag(visualise)
-        while t < tf:
+        while self.t < tf:
             self.step()
-            t = self.get_simulation_time()
+
+            contact = MjContactInfo(self.t, self.iter, self.data.contact)
+            if not contact.is_none():
+                self.contacts.append(contact)
+            
+
+            self.t = self.get_simulation_time()
             for callback in callbacks:
-                callback.on_simulation_step(t, self.data)
+                d = {
+                    "contact" : contact,
+                }
+                callback.on_simulation_step(self.t, self.iter, self.data, d)
             if self.should_stop:
                 break
         for callback in callbacks:
             callback.on_simulation_end()
+        self.iter += 1
          
+    def reset(self) -> None:
+        """
+        Resets the simulator to the initial state.
+        This method resets the simulator to the initial state by setting the control input to zero and 
+        calling the `step` method with zero steps.
+        """
+
+        self.set_input(np.zeros(self.robot_model.NDoF))
+        self.step(0)
+        self.t = 0
+        self.iter = 0
