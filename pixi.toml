@@ -26,7 +26,7 @@ resolve-robotics-uri-py = ">=0.3.0,<0.4"
 
 [pypi-dependencies]
 # TODO: move adam-robotics package to conda dependencies as soon as PR https://github.com/ami-iit/adam/pull/100 is merged
-adam-robotics = { git = "https://github.com/flferretti/ADAM.git", rev = "flferretti-patch-1" }
+adam-robotics = { git = "https://github.com/flferretti/ADAM.git", rev = "main" }
 urdfmodifiers = { git = "https://github.com/CarlottaSartore/urdf-modifiers.git", rev = "scalar_modification" }
 comodo = { path = ".", editable = true }
 
