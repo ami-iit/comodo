@@ -364,7 +364,7 @@ class RobotModel(KinDynComputations):
         except Exception as e:
             with tempfile.NamedTemporaryFile(mode="w+", delete=False) as file:
                 file.write(urdf_string)
-            raise ValueError(f"Error while creating the Mujoco model from the URDF string: {e}. Urdf string dumped to {file.name}")
+            raise type(e)(f"Error while creating the Mujoco model from the URDF string (path={self.urdf_path}) ==> {e}. Urdf string dumped to {file.name}")
         path_temp_xml = tempfile.NamedTemporaryFile(mode="w+")
         mujoco.mj_saveLastXML(path_temp_xml.name, mujoco_model)
 

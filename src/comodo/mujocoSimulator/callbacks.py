@@ -58,7 +58,7 @@ class ScoreCallback(Callback):
         self.history = []
 
     def on_simulation_step(self, t: float, iter: int, data: mujoco.MjData, opts: dict = None) -> None:
-        score = self.score_function(t, data, *self.args, **self.kwargs)
+        score = self.score_function(t, iter, data, opts, *self.args, **self.kwargs)
         self.score += score
         self.history.append(score)
 
