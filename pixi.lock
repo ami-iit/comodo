@@ -493,10 +493,13 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.3.1-hb9d3cd8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstandard-0.23.0-py310ha39cb0e_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
-      - pypi: git+https://github.com/flferretti/ADAM.git@919576d96403d1469735c7ebe0e7b0050b617a28
+      - pypi: git+https://github.com/ami-iit/adam.git@8d6e550b5bc9f9f8a917bf93d664963569b1ead6
+      - pypi: git+https://github.com/ami-iit/amo_urdf.git@34b38c69d0f9fc7fc837089c06eda95f59b062b8
+      - pypi: https://files.pythonhosted.org/packages/37/6d/3ee0a79982d3279645523cf63c56688ba8a7b7ea4fe49b2efe2a200e3ba2/drake-1.34.0-cp310-cp310-manylinux_2_35_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/fd/5b/8f0c4a5bb9fd491c277c21eff7ccae71b47d43c4446c9d0c6cff2fe8c2c4/gitdb-4.0.11-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/e9/bd/cc3a402a6439c15c3d4294333e13042b915bbeab54edc457c723931fed3f/GitPython-3.1.43-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d9/5a/bfdc26c0e19156992b1dc9de47f0b2e8992fe43db9981d814f860bdce2b3/prettytable-3.11.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/a7/e4/463fd46922e0b0b369305662f85f1c70dcc1cde1584906cf8defed8308a3/pydot-3.0.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a7/a5/10f97f73544edcdef54409f1d839f6049a0d79df68adbc1ceb24d1aaca42/smmap-5.0.1-py3-none-any.whl
       - pypi: git+https://github.com/CarlottaSartore/urdf-modifiers.git@026bac3839e4049be35e50e211c8d1db72ba03d9
       - pypi: https://files.pythonhosted.org/packages/a3/8b/9dd44781a4e87746a426c56c3368c3da64fd90a130f582340cbf74397f8e/urdf_parser_py-0.0.4.tar.gz
@@ -940,7 +943,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstandard-0.23.0-py310ha39cb0e_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: https://files.pythonhosted.org/packages/a2/ad/e0d3c824784ff121c03cc031f944bc7e139a8f1870ffd2845cc2dd76f6c4/absl_py-2.1.0-py3-none-any.whl
-      - pypi: git+https://github.com/flferretti/ADAM.git@919576d96403d1469735c7ebe0e7b0050b617a28
+      - pypi: git+https://github.com/ami-iit/adam.git@8d6e550b5bc9f9f8a917bf93d664963569b1ead6
       - pypi: https://files.pythonhosted.org/packages/1f/e4/0826dfde2db3fb3a34954323a84d0e6b6fdbc7eb5278c84159c6d43290ac/etils-1.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c6/b2/454d6e7f0158951d8a78c2e1eb4f69ae81beb8dca5fee9809c6c99e9d0d0/fsspec-2024.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fd/5b/8f0c4a5bb9fd491c277c21eff7ccae71b47d43c4446c9d0c6cff2fe8c2c4/gitdb-4.0.11-py3-none-any.whl
@@ -1401,7 +1404,9 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstandard-0.23.0-py310ha39cb0e_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
       - pypi: https://files.pythonhosted.org/packages/a2/ad/e0d3c824784ff121c03cc031f944bc7e139a8f1870ffd2845cc2dd76f6c4/absl_py-2.1.0-py3-none-any.whl
-      - pypi: git+https://github.com/flferretti/ADAM.git@919576d96403d1469735c7ebe0e7b0050b617a28
+      - pypi: git+https://github.com/ami-iit/adam.git@8d6e550b5bc9f9f8a917bf93d664963569b1ead6
+      - pypi: git+https://github.com/ami-iit/amo_urdf.git@34b38c69d0f9fc7fc837089c06eda95f59b062b8
+      - pypi: https://files.pythonhosted.org/packages/37/6d/3ee0a79982d3279645523cf63c56688ba8a7b7ea4fe49b2efe2a200e3ba2/drake-1.34.0-cp310-cp310-manylinux_2_35_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/1f/e4/0826dfde2db3fb3a34954323a84d0e6b6fdbc7eb5278c84159c6d43290ac/etils-1.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c6/b2/454d6e7f0158951d8a78c2e1eb4f69ae81beb8dca5fee9809c6c99e9d0d0/fsspec-2024.10.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/fd/5b/8f0c4a5bb9fd491c277c21eff7ccae71b47d43c4446c9d0c6cff2fe8c2c4/gitdb-4.0.11-py3-none-any.whl
@@ -1410,6 +1415,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/fa/4f/b57f6fbafdb4d0d039f9d9f1353be4d29b85e727191784c79e5fb204d106/mujoco-3.2.4-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
       - pypi: https://files.pythonhosted.org/packages/95/73/1b87b50091af38d86ada50d8fe3f294335f2d730aa1d124f4c714217fe60/mujoco_python_viewer-0.1.4-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d9/5a/bfdc26c0e19156992b1dc9de47f0b2e8992fe43db9981d814f860bdce2b3/prettytable-3.11.0-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/a7/e4/463fd46922e0b0b369305662f85f1c70dcc1cde1584906cf8defed8308a3/pydot-3.0.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/a7/a5/10f97f73544edcdef54409f1d839f6049a0d79df68adbc1ceb24d1aaca42/smmap-5.0.1-py3-none-any.whl
       - pypi: git+https://github.com/CarlottaSartore/urdf-modifiers.git@026bac3839e4049be35e50e211c8d1db72ba03d9
       - pypi: https://files.pythonhosted.org/packages/a3/8b/9dd44781a4e87746a426c56c3368c3da64fd90a130f582340cbf74397f8e/urdf_parser_py-0.0.4.tar.gz
@@ -1901,7 +1907,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.3.1-hb9d3cd8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstandard-0.23.0-py310ha39cb0e_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
-      - pypi: git+https://github.com/flferretti/ADAM.git@919576d96403d1469735c7ebe0e7b0050b617a28
+      - pypi: git+https://github.com/ami-iit/adam.git@8d6e550b5bc9f9f8a917bf93d664963569b1ead6
       - pypi: https://files.pythonhosted.org/packages/fd/5b/8f0c4a5bb9fd491c277c21eff7ccae71b47d43c4446c9d0c6cff2fe8c2c4/gitdb-4.0.11-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/e9/bd/cc3a402a6439c15c3d4294333e13042b915bbeab54edc457c723931fed3f/GitPython-3.1.43-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/95/73/1b87b50091af38d86ada50d8fe3f294335f2d730aa1d124f4c714217fe60/mujoco_python_viewer-0.1.4-py3-none-any.whl
@@ -2360,7 +2366,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zlib-1.3.1-hb9d3cd8_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstandard-0.23.0-py310ha39cb0e_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/zstd-1.5.6-ha6fb4c9_0.conda
-      - pypi: git+https://github.com/flferretti/ADAM.git@919576d96403d1469735c7ebe0e7b0050b617a28
+      - pypi: git+https://github.com/ami-iit/adam.git@8d6e550b5bc9f9f8a917bf93d664963569b1ead6
       - pypi: https://files.pythonhosted.org/packages/fd/5b/8f0c4a5bb9fd491c277c21eff7ccae71b47d43c4446c9d0c6cff2fe8c2c4/gitdb-4.0.11-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/e9/bd/cc3a402a6439c15c3d4294333e13042b915bbeab54edc457c723931fed3f/GitPython-3.1.43-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d9/5a/bfdc26c0e19156992b1dc9de47f0b2e8992fe43db9981d814f860bdce2b3/prettytable-3.11.0-py3-none-any.whl
@@ -2458,22 +2464,27 @@ packages:
   timestamp: 1722622759964
 - kind: pypi
   name: adam-robotics
-  version: 0.0.9.dev62
-  url: git+https://github.com/flferretti/ADAM.git@919576d96403d1469735c7ebe0e7b0050b617a28
+  version: 0.3.1.dev46
+  url: git+https://github.com/ami-iit/adam.git@8d6e550b5bc9f9f8a917bf93d664963569b1ead6
   requires_dist:
   - numpy>=1.20
   - scipy
-  - casadi
+  - casadi>=3.6
   - prettytable
   - urdf-parser-py
   - jax ; extra == 'all'
   - jaxlib ; extra == 'all'
   - casadi ; extra == 'all'
   - torch ; extra == 'all'
+  - jax2torch ; extra == 'all'
   - casadi ; extra == 'casadi'
+  - idyntree ; extra == 'conversions'
   - jax ; extra == 'jax'
   - jaxlib ; extra == 'jax'
   - torch ; extra == 'pytorch'
+  - jax ; extra == 'pytorch'
+  - jaxlib ; extra == 'pytorch'
+  - jax2torch ; extra == 'pytorch'
   - jax ; extra == 'test'
   - jaxlib ; extra == 'test'
   - casadi ; extra == 'test'
@@ -2483,6 +2494,7 @@ packages:
   - icub-models ; extra == 'test'
   - black ; extra == 'test'
   - gitpython ; extra == 'test'
+  - jax2torch ; extra == 'test'
   requires_python: '>=3.7'
 - kind: conda
   name: aiohappyeyeballs
@@ -2560,6 +2572,13 @@ packages:
   purls: []
   size: 555868
   timestamp: 1718118368236
+- kind: pypi
+  name: amo-urdf
+  version: 0.0.1
+  url: git+https://github.com/ami-iit/amo_urdf.git@34b38c69d0f9fc7fc837089c06eda95f59b062b8
+  requires_dist:
+  - six
+  requires_python: '>=3.8'
 - kind: conda
   name: ampl-mp
   version: 3.1.0
@@ -3496,6 +3515,17 @@ packages:
   purls: []
   size: 78645
   timestamp: 1686489937183
+- kind: pypi
+  name: drake
+  version: 1.34.0
+  url: https://files.pythonhosted.org/packages/37/6d/3ee0a79982d3279645523cf63c56688ba8a7b7ea4fe49b2efe2a200e3ba2/drake-1.34.0-cp310-cp310-manylinux_2_35_x86_64.whl
+  sha256: a5e39c5a64f7b867a15d795a5eb933cb36ca15de1cfc71c010d1e949f2a78529
+  requires_dist:
+  - pyyaml
+  - matplotlib
+  - numpy
+  - pydot
+  requires_python: '>=3.10'
 - kind: conda
   name: eigen
   version: 3.4.0
@@ -9746,6 +9776,25 @@ packages:
   - pkg:pypi/pycparser?source=hash-mapping
   size: 105098
   timestamp: 1711811634025
+- kind: pypi
+  name: pydot
+  version: 3.0.2
+  url: https://files.pythonhosted.org/packages/a7/e4/463fd46922e0b0b369305662f85f1c70dcc1cde1584906cf8defed8308a3/pydot-3.0.2-py3-none-any.whl
+  sha256: 99cedaa55d04abb0b2bc56d9981a6da781053dd5ac75c428e8dd53db53f90b14
+  requires_dist:
+  - pyparsing>=3.0.9
+  - chardet ; extra == 'dev'
+  - parameterized ; extra == 'dev'
+  - ruff ; extra == 'dev'
+  - zest-releaser[recommended] ; extra == 'release'
+  - chardet ; extra == 'tests'
+  - parameterized ; extra == 'tests'
+  - ruff ; extra == 'tests'
+  - tox ; extra == 'tests'
+  - pytest ; extra == 'tests'
+  - pytest-cov ; extra == 'tests'
+  - pytest-xdist[psutil] ; extra == 'tests'
+  requires_python: '>=3.8'
 - kind: conda
   name: pyglet
   version: 1.5.16
