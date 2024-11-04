@@ -10,6 +10,7 @@ import mujoco_viewer
 import copy
 import logging
 import pathlib
+import tempfile
 import casadi as cs
 
 
@@ -54,7 +55,13 @@ class MujocoSimulator(Simulator):
 
         self.robot_model = robot_model        
         mujoco_xml = robot_model.get_mujoco_model(floor_opts=floor_opts, save_mjc_xml=False)
-        self.model = mujoco.MjModel.from_xml_string(mujoco_xml)
+        try:
+            self.model = mujoco.MjModel.from_xml_string(mujoco_xml)
+        except Exception as e:
+            with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
+                f.write(mujoco_xml)
+                self.logger.fatal(f"Error in loading model: {e}. Dumped xml to {f.name}")
+            raise
         self.data = mujoco.MjData(self.model)
         self.create_mapping_vector_from_mujoco()
         self.create_mapping_vector_to_mujoco()
