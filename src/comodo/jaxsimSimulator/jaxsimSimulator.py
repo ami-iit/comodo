@@ -192,7 +192,7 @@ class JaxsimSimulator(Simulator):
                     )
                 case JaxsimContactModelEnum.RELAXED_RIGID:
                     contact_params = (
-                        jaxsim.rbda.contacts.RelaxedRigidContactsParams.build(mu=0.005)
+                        jaxsim.rbda.contacts.RelaxedRigidContactsParams.build()
                     )
                 case JaxsimContactModelEnum.VISCO_ELASTIC | JaxsimContactModelEnum.SOFT:
                     contact_params = js.contact.estimate_good_contact_parameters(
