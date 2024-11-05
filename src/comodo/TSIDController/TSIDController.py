@@ -138,7 +138,7 @@ class TSIDController(Controller):
         )
         self.left_foot_param_handler.set_parameter_int(name="number_of_slices", value=2)
         self.left_foot_param_handler.set_parameter_float(
-            name="static_friction_coefficient", value=1.0
+            name="static_friction_coefficient", value=0.33
         )
         self.left_foot_param_handler.set_parameter_vector_float(
             name="foot_limits_x", value=[-0.12, 0.12]
