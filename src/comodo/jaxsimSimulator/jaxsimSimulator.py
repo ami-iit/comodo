@@ -328,6 +328,7 @@ class JaxsimSimulator(Simulator):
                 self._data, _ = jaxsim.rbda.contacts.visco_elastic.step(
                     model=self._model,
                     data=self._data,
+                    dt=self._dt,
                     link_forces=None,
                     joint_force_references=self._tau,
                 )
@@ -338,6 +339,7 @@ class JaxsimSimulator(Simulator):
                 self._data, self._integrator_state = js.model.step(
                     model=self._model,
                     data=self._data,
+                    dt=self._dt,
                     integrator=self._integrator,
                     integrator_state=self._integrator_state,
                     link_forces=None,
