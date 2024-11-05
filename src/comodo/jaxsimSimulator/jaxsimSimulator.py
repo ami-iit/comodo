@@ -64,11 +64,9 @@ class JaxsimSimulator(Simulator):
         # Simulation model
         self._model: js.model.JaxSimModel | None = None
 
-        # Integrator (not used for visco-elastic contacts)
-        self._integrator: integrators.common.Integrator | None = None
-
-        # Integrator state for the simulation (not used for visco-elastic contacts)
-        self._integrator_state: dict[str, Any] | None = None
+        # Step aux dict.
+        # This is used only for variable-step integrators.
+        self._step_aux_dict: dict[str, Any]= {}
 
         # Time step for the simulation
         self._dt: float = dt
@@ -228,23 +226,6 @@ class JaxsimSimulator(Simulator):
             contacts_params=contact_params,
         )
 
-        self.integrator = None
-        self.integrator_state = None
-
-        if self._contact_model_type is not JaxsimContactModelEnum.VISCO_ELASTIC:
-
-            self._integrator = integrators.fixed_step.Heun2SO3.build(
-                dynamics=js.ode.wrap_system_dynamics_for_integration(
-                    model=self._model,
-                    data=self._data,
-                    system_dynamics=js.ode.system_dynamics,
-                )
-            )
-
-            self._integrator_state = self._integrator.init(
-                x0=self._data.state, t0=0, dt=self._model.time_step
-            )
-
         # Initialize tau to zero
         self._tau = np.zeros(self._model.dofs())
 
@@ -336,14 +317,15 @@ class JaxsimSimulator(Simulator):
             else:
 
                 # All other contact models
-                self._data, self._integrator_state = js.model.step(
+                self._data, self._step_aux_dict = js.model.step(
                     model=self._model,
                     data=self._data,
                     dt=self._dt,
-                    integrator=self._integrator,
-                    integrator_state=self._integrator_state,
                     link_forces=None,
                     joint_force_references=self._tau,
+                    integrator_metadata=self._step_aux_dict.get(
+                        "integrator_metadata", None
+                    ),
                 )
 
             if not dry_run:
