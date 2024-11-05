@@ -289,7 +289,7 @@ class JaxsimSimulator(Simulator):
 
         self._tau = jnp.array(input)[self._to_js]
 
-    def step(self, n_step: int = 1, dry_run=False) -> None:
+    def step(self, n_step: int = 1, *, dry_run=False) -> None:
         """Step the simulation forward by n_step steps.
 
         Args:
