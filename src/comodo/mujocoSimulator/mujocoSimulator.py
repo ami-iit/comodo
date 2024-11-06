@@ -60,7 +60,7 @@ class MujocoSimulator(Simulator):
         except Exception as e:
             with tempfile.NamedTemporaryFile(mode="w", delete=False) as f:
                 f.write(mujoco_xml)
-                self.logger.fatal(f"Error in loading model: {e}. Dumped xml to {f.name}")
+                self.logger.fatal(f"Error in loading model {robot_model.robot_name}: {e}. Dumped xml to {f.name}")
             raise
         self.data = mujoco.MjData(self.model)
         self.create_mapping_vector_from_mujoco()
