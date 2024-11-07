@@ -1,5 +1,6 @@
 from adam.casadi.computations import KinDynComputations
 import numpy as np
+import io
 import pathlib
 from typing import Union
 from urchin import URDF
@@ -115,6 +116,7 @@ class RobotModel(KinDynComputations):
         super().__init__(urdf_path, self.joint_name_list, self.base_link)
         # self.H_left_foot = self.forward_kinematics_fun(self.left_foot_frame)
         # self.H_right_foot = self.forward_kinematics_fun(self.right_foot_frame)
+        print("....", self.forward_kinematics_fun("right_foot"), " -- ", type(self.forward_kinematics_fun("right_foot")))
 
     def override_control_boar_list(self, remote_control_board_list: list):
         self.remote_control_board_list = remote_control_board_list
@@ -263,9 +265,6 @@ class RobotModel(KinDynComputations):
 
     def get_mujoco_urdf_string(self) -> str:
         ## We first start by ET
-        tempFileOut = tempfile.NamedTemporaryFile(mode="w+")
-        tempFileOut.write(copy.deepcopy(self.urdf_path))
-
         parser = ET.XMLParser(encoding="utf-8")
         tree = ET.parse(self.urdf_path, parser=parser)
         root = tree.getroot()
@@ -359,12 +358,7 @@ class RobotModel(KinDynComputations):
         
         # Get the URDF string
         urdf_string = self.get_mujoco_urdf_string()
-        try:
-            mujoco_model = mujoco.MjModel.from_xml_string(urdf_string)
-        except Exception as e:
-            with tempfile.NamedTemporaryFile(mode="w+", delete=False) as file:
-                file.write(urdf_string)
-            raise type(e)(f"Error while creating the Mujoco model from the URDF string (path={self.urdf_path}) ==> {e}. Urdf string dumped to {file.name}")
+        mujoco_model = mujoco.MjModel.from_xml_string(urdf_string)
         path_temp_xml = tempfile.NamedTemporaryFile(mode="w+")
         mujoco.mj_saveLastXML(path_temp_xml.name, mujoco_model)
 
@@ -464,6 +458,9 @@ class RobotModel(KinDynComputations):
         floor.set("condim", "3")
         floor.set("euler", "{} {} {}".format(*floor_inclination))
         floor.set("friction", "{} {} {}".format(sliding_friction, torsional_friction, rolling_friction))
+
+        #if world_elem.find(".//geom[@name='floor']") is not None:
+        #    world_elem.remove(world_elem.find(".//geom[@name='floor']"))
         world_elem.append(floor)
         new_xml = ET.tostring(tree.getroot(), encoding="unicode")
 
