@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+import enum
 import logging
 import math
 import pathlib
-import enum
 from typing import Any
 
 import jax.numpy as jnp
 import jaxsim
 import jaxsim.api as js
+import jaxsim.rbda.contacts
 import numpy as np
 import numpy.typing as npt
 from jaxsim import VelRepr, integrators
@@ -16,15 +17,6 @@ from jaxsim.mujoco import MujocoVideoRecorder
 from jaxsim.mujoco.loaders import UrdfToMjcf
 from jaxsim.mujoco.model import MujocoModelHelper
 from jaxsim.mujoco.visualizer import MujocoVisualizer
-from jaxsim.rbda.contacts import (
-    ContactParamsTypes,
-    SoftContacts,
-    RelaxedRigidContacts,
-    RelaxedRigidContactsParams,
-    RigidContacts,
-    RigidContactsParams,
-    ViscoElasticContacts,
-)
 
 from comodo.abstractClasses.simulator import Simulator
 from comodo.robotModel.robotModel import RobotModel
@@ -54,11 +46,15 @@ class JaxsimContactModelEnum(enum.IntEnum):
 
 
 class JaxsimSimulator(Simulator):
+
     def __init__(
         self,
         dt: float = 0.001,
         contact_model_type: JaxsimContactModelEnum = JaxsimContactModelEnum.RELAXED_RIGID,
     ) -> None:
+
+        super().__init__()
+
         # Flag to check if the simulator is initialized
         self._is_initialized: bool = False
 
@@ -68,11 +64,9 @@ class JaxsimSimulator(Simulator):
         # Simulation model
         self._model: js.model.JaxSimModel | None = None
 
-        # Integrator (not used for visco-elastic contacts)
-        self._integrator: integrators.common.Integrator | None = None
-
-        # Integrator state for the simulation (not used for visco-elastic contacts)
-        self._integrator_state: dict[str, Any] | None = None
+        # Step aux dict.
+        # This is used only for variable-step integrators.
+        self._step_aux_dict: dict[str, Any]= {}
 
         # Time step for the simulation
         self._dt: float = dt
@@ -81,10 +75,10 @@ class JaxsimSimulator(Simulator):
         self._t: float = 0.0
 
         # Joint torques
-        self._tau: npt.ArrayLike | None = None
+        self._tau: npt.NDArray | None = None
 
         # Link contact forces
-        self._link_contact_forces: npt.ArrayLike | None = None
+        self._link_contact_forces: npt.NDArray | None = None
 
         # Contact model to use
         self._contact_model_type: JaxsimContactModelEnum = contact_model_type
@@ -102,10 +96,10 @@ class JaxsimSimulator(Simulator):
         self._right_footsole_frame_idx: int | None = None
 
         # Mapping between user provided joint names and JaxSim joint names
-        self._to_js: npt.ArrayLike | None = None
+        self._to_js: npt.NDArray | None = None
 
         # Mapping between JaxSim joint names and user provided joint names
-        self._to_user: npt.ArrayLike | None = None
+        self._to_user: npt.NDArray | None = None
 
         # ==== Visualization attributes ====
         # Mode for visualization ('record', 'interactive', or None)
@@ -134,7 +128,7 @@ class JaxsimSimulator(Simulator):
         *,
         xyz_rpy: npt.ArrayLike = np.zeros(6),
         s: npt.ArrayLike | None = None,
-        contact_params: ContactParamsTypes | None = None,
+        contact_params: jaxsim.rbda.contacts.ContactParamsTypes | None = None,
         left_foot_link_name: str | None = "l_ankle_2",
         right_foot_link_name: str | None = "r_ankle_2",
         left_foot_sole_frame_name: str | None = "l_sole",
@@ -166,13 +160,13 @@ class JaxsimSimulator(Simulator):
 
         match self._contact_model_type:
             case JaxsimContactModelEnum.RIGID:
-                contact_model = RigidContacts.build()
+                contact_model = jaxsim.rbda.contacts.RigidContacts.build()
             case JaxsimContactModelEnum.RELAXED_RIGID:
-                contact_model = RelaxedRigidContacts.build()
+                contact_model = jaxsim.rbda.contacts.RelaxedRigidContacts.build()
             case JaxsimContactModelEnum.VISCO_ELASTIC:
-                contact_model = ViscoElasticContacts.build()
+                contact_model = jaxsim.rbda.contacts.ViscoElasticContacts.build()
             case JaxsimContactModelEnum.SOFT:
-                contact_model = SoftContacts.build()
+                contact_model = jaxsim.rbda.contacts.SoftContacts.build()
             case _:
                 raise ValueError(
                     f"Invalid contact model type: {self._contact_model_type}"
@@ -182,24 +176,29 @@ class JaxsimSimulator(Simulator):
             model_description=robot_model.urdf_string,
             model_name=robot_model.robot_name,
             contact_model=contact_model,
+            time_step=self._dt,
         )
 
         self._model = js.model.reduce(
             model=model,
-            considered_joints=robot_model.joint_name_list,
+            considered_joints=tuple(robot_model.joint_name_list),
         )
 
         if contact_params is None:
             match self._contact_model_type:
                 case JaxsimContactModelEnum.RIGID:
-                    contact_params = RigidContactsParams.build(mu=0.5, K=1.0e4, D=1.0e2)
+                    contact_params = jaxsim.rbda.contacts.RigidContactsParams.build(
+                        mu=0.5, K=1.0e4, D=1.0e2
+                    )
                 case JaxsimContactModelEnum.RELAXED_RIGID:
-                    contact_params = RelaxedRigidContactsParams.build(mu=0.005)
+                    contact_params = (
+                        jaxsim.rbda.contacts.RelaxedRigidContactsParams.build()
+                    )
                 case JaxsimContactModelEnum.VISCO_ELASTIC | JaxsimContactModelEnum.SOFT:
                     contact_params = js.contact.estimate_good_contact_parameters(
                         model=self._model,
-                        number_of_active_collidable_points_steady_state=16,
-                        max_penetration=0.002,
+                        number_of_active_collidable_points_steady_state=8,
+                        max_penetration=0.002_5,
                         damping_ratio=1.0,
                         static_friction_coefficient=1.0,
                     )
@@ -226,19 +225,6 @@ class JaxsimSimulator(Simulator):
             joint_positions=jnp.array(s),
             contacts_params=contact_params,
         )
-
-        if self._contact_model_type is not JaxsimContactModelEnum.VISCO_ELASTIC:
-            self._integrator = integrators.fixed_step.Heun2.build(
-                dynamics=js.ode.wrap_system_dynamics_for_integration(
-                    model=self._model,
-                    data=self._data,
-                    system_dynamics=js.ode.system_dynamics,
-                )
-            )
-
-            self._integrator_state = self._integrator.init(
-                x0=self._data.state, t0=0, dt=self._dt
-            )
 
         # Initialize tau to zero
         self._tau = np.zeros(self._model.dofs())
@@ -288,6 +274,8 @@ class JaxsimSimulator(Simulator):
                 model=self._mj_model_helper.model,
                 data=self._mj_model_helper.data,
                 fps=30,
+                width=320 * 4,
+                height=240 * 4,
             )
 
         self._is_initialized = True
@@ -301,7 +289,7 @@ class JaxsimSimulator(Simulator):
 
         self._tau = jnp.array(input)[self._to_js]
 
-    def step(self, n_step: int = 1, dry_run=False) -> None:
+    def step(self, n_step: int = 1, *, dry_run=False) -> None:
         """Step the simulation forward by n_step steps.
 
         Args:
@@ -315,25 +303,29 @@ class JaxsimSimulator(Simulator):
         ), "Simulator is not initialized, call load_model first."
 
         for _ in range(n_step):
+
             if self._contact_model_type is JaxsimContactModelEnum.VISCO_ELASTIC:
+
                 self._data, _ = jaxsim.rbda.contacts.visco_elastic.step(
                     model=self._model,
                     data=self._data,
                     dt=self._dt,
-                    joint_force_references=self._tau,
                     link_forces=None,
+                    joint_force_references=self._tau,
                 )
 
             else:
+
                 # All other contact models
-                self._data, self._integrator_state = js.model.step(
+                self._data, self._step_aux_dict = js.model.step(
                     model=self._model,
                     data=self._data,
                     dt=self._dt,
-                    integrator=self._integrator,
-                    integrator_state=self._integrator_state,
-                    joint_force_references=self._tau,
                     link_forces=None,
+                    joint_force_references=self._tau,
+                    integrator_metadata=self._step_aux_dict.get(
+                        "integrator_metadata", None
+                    ),
                 )
 
             if not dry_run:
@@ -355,18 +347,17 @@ class JaxsimSimulator(Simulator):
                         pass
 
         # Update link contact forces
-        if (
-            not dry_run
-            and self._contact_model_type is not JaxsimContactModelEnum.VISCO_ELASTIC
-        ):
+        if not dry_run:
+
             with self._data.switch_velocity_representation(VelRepr.Mixed):
+
                 self._link_contact_forces = js.model.link_contact_forces(
                     model=self._model,
                     data=self._data,
                     joint_force_references=self._tau,
                 )
 
-    def get_state(self) -> tuple[npt.ArrayLike, npt.ArrayLike, npt.ArrayLike]:
+    def get_state(self) -> tuple[npt.NDArray, npt.NDArray, npt.NDArray]:
         """
         Retrieve the current state of the simulator.
 
@@ -396,16 +387,13 @@ class JaxsimSimulator(Simulator):
     # ==== Properties and public methods ====
 
     @property
-    def feet_wrench(self) -> npt.ArrayLike:
-        # TODO: remove this check as soon as Jaxsim adds support for it
-        if self._contact_model_type is JaxsimContactModelEnum.VISCO_ELASTIC:
-            raise ValueError(
-                "Link contact forces are only available for non visco-elastic contact models."
-            )
+    def feet_wrench(self) -> tuple[npt.NDArray, npt.NDArray]:
+
         if self._link_contact_forces is None:
             raise ValueError(
                 "Link contact forces are only available after calling the step method."
             )
+
         wrenches = self.link_contact_forces
 
         left_foot = np.array(wrenches[self._left_foot_link_idx])
@@ -413,14 +401,14 @@ class JaxsimSimulator(Simulator):
         return left_foot, right_foot
 
     @property
-    def base_transform(self) -> npt.ArrayLike:
+    def base_transform(self) -> npt.NDArray:
         assert (
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
         return np.array(self._data.base_transform())
 
     @property
-    def base_velocity(self) -> npt.ArrayLike:
+    def base_velocity(self) -> npt.NDArray:
         assert (
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
@@ -435,16 +423,13 @@ class JaxsimSimulator(Simulator):
         return self._t
 
     @property
-    def link_contact_forces(self) -> npt.ArrayLike:
+    def link_contact_forces(self) -> npt.NDArray:
+
         if self._link_contact_forces is None:
             raise ValueError(
                 "Link contact forces are only available after calling the step method."
             )
-        # TODO: remove this check as soon as Jaxsim adds support for it
-        if self._contact_model_type is JaxsimContactModelEnum.VISCO_ELASTIC:
-            raise ValueError(
-                "Link contact forces are only available for non visco-elastic contact models."
-            )
+
         return self._link_contact_forces
 
     @property
@@ -452,10 +437,10 @@ class JaxsimSimulator(Simulator):
         assert (
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
-        return js.model.total_mass(self._model)
+        return float(js.model.total_mass(self._model))
 
     @property
-    def feet_positions(self) -> tuple[npt.ArrayLike, npt.ArrayLike]:
+    def feet_positions(self) -> tuple[npt.NDArray, npt.NDArray]:
         assert (
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
@@ -470,28 +455,28 @@ class JaxsimSimulator(Simulator):
             frame_index=self._right_footsole_frame_idx,
         )[0:3, 3]
 
-        return (W_p_lf, W_p_rf)
+        return np.array(W_p_lf), np.array(W_p_rf)
 
     @property
     def frame_names(self) -> list[str]:
         assert (
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
-        return self._model.frame_names()
+        return list(self._model.frame_names())
 
     @property
     def link_names(self) -> list[str]:
         assert (
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
-        return self._model.link_names()
+        return list(self._model.link_names())
 
     @property
-    def com_position(self) -> npt.ArrayLike:
+    def com_position(self) -> npt.NDArray:
         assert (
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
-        return js.com.com_position(self._model, self._data)
+        return np.array(js.com.com_position(self._model, self._data))
 
     @property
     def contact_model_type(self) -> JaxsimContactModelEnum:
@@ -500,7 +485,9 @@ class JaxsimSimulator(Simulator):
     def reset_simulation_time(self) -> None:
         self._t = 0.0
 
-    def update_contact_model_parameters(self, params: ContactParamsTypes) -> None:
+    def update_contact_model_parameters(
+        self, params: jaxsim.rbda.contacts.ContactParamsTypes
+    ) -> None:
         assert (
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
@@ -510,7 +497,7 @@ class JaxsimSimulator(Simulator):
     # ==== Private methods ====
 
     @staticmethod
-    def _RPY_to_quat(roll, pitch, yaw) -> list[float, float, float, float]:
+    def _RPY_to_quat(roll, pitch, yaw) -> list[float]:
         cr = math.cos(roll / 2)
         cp = math.cos(pitch / 2)
         cy = math.cos(yaw / 2)
@@ -541,26 +528,26 @@ class JaxsimSimulator(Simulator):
             self._handle = self._viz.open_viewer()
 
         self._mj_model_helper.set_base_position(
-            position=self._data.base_position(),
+            position=np.array(self._data.base_position()),
         )
         self._mj_model_helper.set_base_orientation(
-            orientation=self._data.base_orientation(),
+            orientation=np.array(self._data.base_orientation()),
         )
         self._mj_model_helper.set_joint_positions(
-            positions=self._data.joint_positions(),
+            positions=np.array(self._data.joint_positions()),
             joint_names=self._model.joint_names(),
         )
         self._viz.sync(viewer=self._handle)
 
     def _record_frame(self) -> None:
         self._mj_model_helper.set_base_position(
-            position=self._data.base_position(),
+            position=np.array(self._data.base_position()),
         )
         self._mj_model_helper.set_base_orientation(
-            orientation=self._data.base_orientation(),
+            orientation=np.array(self._data.base_orientation()),
         )
         self._mj_model_helper.set_joint_positions(
-            positions=self._data.joint_positions(),
+            positions=np.array(self._data.joint_positions()),
             joint_names=self._model.joint_names(),
         )
 
