@@ -265,6 +265,9 @@ class RobotModel(KinDynComputations):
         parser = ET.XMLParser(encoding="utf-8")
         tree = ET.parse(self.urdf_path, parser=parser)
         root = tree.getroot()
+        has_root_link = "root" in [l.attrib['name'] for l in root.findall(".//link")]
+        if not has_root_link:
+            raise ValueError("The URDF file must have a link named 'root'")
         self.mujoco_joint_order = []
         # Declaring as fixed the not controlled joints
         for joint in root.findall(".//joint"):
