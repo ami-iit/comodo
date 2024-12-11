@@ -116,7 +116,13 @@ class RobotModel(KinDynComputations):
         super().__init__(urdf_path, self.joint_name_list, self.base_link)
         # self.H_left_foot = self.forward_kinematics_fun(self.left_foot_frame)
         # self.H_right_foot = self.forward_kinematics_fun(self.right_foot_frame)
-        print("....", self.forward_kinematics_fun("right_foot"), " -- ", type(self.forward_kinematics_fun("right_foot")))
+        #print("....", self.forward_kinematics_fun("right_foot"), " -- ", type(self.forward_kinematics_fun("right_foot")))
+
+    def a(self, link_name: str):
+        try:
+            return self.forward_kinematics_fun(link_name)
+        except:
+            return None
 
     def override_control_boar_list(self, remote_control_board_list: list):
         self.remote_control_board_list = remote_control_board_list

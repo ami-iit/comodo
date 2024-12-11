@@ -16,6 +16,8 @@ import casadi as cs
 
 class MujocoSimulator(Simulator):
     def __init__(self, logger: logging.Logger = None, log_dir: str = "") -> None:
+        self.robot_model = None
+        self.model = None
         self.desired_pos = None
         self.postion_control = False
         self.should_stop = False
@@ -53,7 +55,7 @@ class MujocoSimulator(Simulator):
             None
         """
 
-        self.robot_model = robot_model        
+        self.robot_model = robot_model
         mujoco_xml = robot_model.get_mujoco_model(floor_opts=floor_opts, save_mjc_xml=False)
         try:
             self.model = mujoco.MjModel.from_xml_string(mujoco_xml)
@@ -81,6 +83,17 @@ class MujocoSimulator(Simulator):
         # self.H_left_foot_num = None
         # self.H_right_foot_num = None
         self.mass = self.robot_model.get_total_mass()
+
+    def get_model_frame_pose2(self, frame_name: str) -> np.ndarray:
+        frame_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_BODY, frame_name)
+        return self.data.xpos[frame_id] 
+    
+    def get_model_frame_pose(self, frame_name: str) -> np.ndarray:
+        base_pose = self.get_base()
+        joint_values = self.get_state()[0]
+        frame_pose = self.robot_model.forward_kinematics(frame_name, base_pose, joint_values)
+        return frame_pose
+
 
     def get_contact_status(self) -> tuple:
         """
@@ -347,13 +360,13 @@ class MujocoSimulator(Simulator):
         error = cs.Function("error", [H], [theta])
         self.error_mis = error
 
-    def check_feet_status(self, s, H_b) -> tuple:
+    def check_feet_status(self, s: np.ndarray, H_b: np.ndarray) -> tuple:
         """
         Checks the status of the robot's feet to determine if they are in contact with the ground and aligned properly.
         
         Args:
-            s (np.ndarray): The state vector of the robot.
-            H_b (np.ndarray): The homogeneous transformation matrix representing the base pose of the robot.
+            s (np.ndarray): The state vector of the robot. Shape must be (NDoF,).
+            H_b (np.ndarray): The homogeneous transformation matrix representing the base pose of the robot. Shape must be (4, 4).
         Returns:
             tuple:
                 bool: True if both feet are in contact with the ground and properly aligned, False otherwise.
@@ -612,18 +625,17 @@ class MujocoSimulator(Simulator):
             if not contact.is_none():
                 self.contacts.append(contact)
             
-
             self.t = self.get_simulation_time()
             for callback in callbacks:
                 d = {
                     "contact" : contact,
                 }
                 callback.on_simulation_step(self.t, self.iter, self.data, d)
+            self.iter += 1
             if self.should_stop:
                 break
         for callback in callbacks:
             callback.on_simulation_end()
-        self.iter += 1
          
     def reset(self) -> None:
         """
