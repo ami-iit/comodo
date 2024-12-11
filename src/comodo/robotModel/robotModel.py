@@ -16,35 +16,79 @@ from pathlib import Path
 class RobotModel(KinDynComputations):
     def __init__(
         self,
-        urdfstring: str,
+        urdf_path: str,
         robot_name: str,
         joint_name_list: list,
-        base_link: str = "root_link",
-        left_foot: str = "l_sole",
-        right_foot: str = "r_sole",
-        torso: str = "chest",
-        right_foot_rear_link_name: str = "r_foot_rear",
-        right_foot_front_link_name: str = "r_foot_front",
-        left_foot_rear_link_name: str = "l_foot_rear",
-        left_foot_front_link_name: str = "l_foot_front",
+        base_link: str = "root",
+        left_foot: str = None,
+        right_foot: str = None,
+        torso: str = None,
+        right_foot_rear_link_name: str = None,
+        right_foot_front_link_name: str = None,
+        left_foot_rear_link_name: str = None,
+        left_foot_front_link_name: str = None,
         kp_pos_control: np.float32 = np.array(
-            [35 * 70.0, 35 * 70.0, 35 * 40.0, 35 * 100.0, 35 * 100.0, 35 * 100.0,35 * 70.0, 35 * 70.0, 35 * 40.0, 35 * 100.0, 35 * 100.0, 35 * 100.0,20 * 5.745, 20 * 5.745, 20 * 5.745, 20 * 1.745,20 * 5.745, 20 * 5.745, 20 * 5.745, 20 * 1.745]
+            [
+                35 * 70.0,
+                35 * 70.0,
+                35 * 40.0,
+                35 * 100.0,
+                35 * 100.0,
+                35 * 100.0,
+                35 * 70.0,
+                35 * 70.0,
+                35 * 40.0,
+                35 * 100.0,
+                35 * 100.0,
+                35 * 100.0,
+                20 * 5.745,
+                20 * 5.745,
+                20 * 5.745,
+                20 * 1.745,
+                20 * 5.745,
+                20 * 5.745,
+                20 * 5.745,
+                20 * 1.745,
+            ]
         ),
-        kd_pos_control: np.float32= np.array([15 * 0.15, 15 * 0.15, 15 * 0.35, 15 * 0.15, 15 * 0.15, 15 * 0.15,15 * 0.15, 15 * 0.15, 15 * 0.35, 15 * 0.15, 15 * 0.15, 15 * 0.15,4 * 5.745, 4 * 5.745, 4 * 5.745, 4 * 1.745,4 * 5.745, 4 * 5.745, 4 * 5.745, 4 * 1.745])
+        kd_pos_control: np.float32 = np.array(
+            [
+                15 * 0.15,
+                15 * 0.15,
+                15 * 0.35,
+                15 * 0.15,
+                15 * 0.15,
+                15 * 0.15,
+                15 * 0.15,
+                15 * 0.15,
+                15 * 0.35,
+                15 * 0.15,
+                15 * 0.15,
+                15 * 0.15,
+                4 * 5.745,
+                4 * 5.745,
+                4 * 5.745,
+                4 * 1.745,
+                4 * 5.745,
+                4 * 5.745,
+                4 * 5.745,
+                4 * 1.745,
+            ]
+        ),
     ) -> None:
         self.collision_keyword = "_collision"
         self.visual_keyword = "_visual"
-        self.urdf_string = urdfstring
+        self.urdf_path = urdf_path
         self.robot_name = robot_name
         self.joint_name_list = joint_name_list
         self.base_link = base_link
         self.left_foot_frame = left_foot
         self.right_foot_frame = right_foot
-        self.torso_link = torso
-        self.right_foot_rear_ct = right_foot_rear_link_name + self.collision_keyword
-        self.right_foot_front_ct = right_foot_front_link_name + self.collision_keyword
-        self.left_foot_rear_ct = left_foot_rear_link_name + self.collision_keyword
-        self.left_foot_front_ct = left_foot_front_link_name + self.collision_keyword
+        # self.torso_link = torso
+        # self.right_foot_rear_ct = right_foot_rear_link_name + self.collision_keyword
+        # self.right_foot_front_ct = right_foot_front_link_name + self.collision_keyword
+        # self.left_foot_rear_ct = left_foot_rear_link_name + self.collision_keyword
+        # self.left_foot_front_ct = left_foot_front_link_name + self.collision_keyword
 
         self.remote_control_board_list = [
             "/" + self.robot_name + "/torso",
@@ -55,15 +99,15 @@ class RobotModel(KinDynComputations):
         ]
 
         self.kp_position_control = kp_pos_control
-        self.kd_position_control = kd_pos_control 
+        self.kd_position_control = kd_pos_control
         self.ki_position_control = 10 * self.kd_position_control
         self.gravity = iDynTree.Vector3()
         self.gravity.zero()
         self.gravity.setVal(2, -9.81)
         self.H_b = iDynTree.Transform()
-        super().__init__(urdfstring, self.joint_name_list, self.base_link)
-        self.H_left_foot = self.forward_kinematics_fun(self.left_foot_frame)
-        self.H_right_foot = self.forward_kinematics_fun(self.right_foot_frame)
+        super().__init__(urdf_path, self.joint_name_list, self.base_link)
+        # self.H_left_foot = self.forward_kinematics_fun(self.left_foot_frame)
+        # self.H_right_foot = self.forward_kinematics_fun(self.right_foot_frame)
 
     def override_control_boar_list(self, remote_control_board_list: list):
         self.remote_control_board_list = remote_control_board_list
@@ -91,7 +135,7 @@ class RobotModel(KinDynComputations):
     def get_idyntree_kyndyn(self):
         model_loader = iDynTree.ModelLoader()
         model_loader.loadReducedModelFromString(
-            copy.deepcopy(self.urdf_string), self.joint_name_list
+            copy.deepcopy(self.urdf_path), self.joint_name_list
         )
         kindyn = iDynTree.KinDynComputations()
         kindyn.loadRobotModel(model_loader.model())
@@ -128,11 +172,11 @@ class RobotModel(KinDynComputations):
         for index, joint_name in enumerate(self.joint_name_list):
             if "knee" in joint_name:
                 self.solver.subject_to(self.s[index] == desired_knee)
-            if "shoulder_roll" in joint_name: 
+            if "shoulder_roll" in joint_name:
                 self.solver.subject_to(self.s[index] == shoulder_roll)
-            if "elbow" in joint_name: 
-                self.solver.subject_to(self.s[index] == elbow)    
-        
+            if "elbow" in joint_name:
+                self.solver.subject_to(self.s[index] == elbow)
+
         self.solver.subject_to(H_left_foot[2, 3] == 0.0)
         self.solver.subject_to(H_right_foot[2, 3] == 0.0)
         self.solver.subject_to(quat_left_foot == reference_rotation)
@@ -183,15 +227,15 @@ class RobotModel(KinDynComputations):
         w_H_init = np.linalg.inv(w_H_lefFoot_num) @ w_H_torso_num
         return w_H_init
 
-    def compute_com_init(self): 
+    def compute_com_init(self):
         com = self.CoM_position_fun()
-        return np.array(com(self.w_H_b_init,self.s_init))
+        return np.array(com(self.w_H_b_init, self.s_init))
 
-    def set_initial_position(self, s_init, w_H_b_init, xyz_rpy_init): 
+    def set_initial_position(self, s_init, w_H_b_init, xyz_rpy_init):
         self.s_init = s_init
         self.w_H_b_init = w_H_b_init
         self.xyz_rpy_init = xyz_rpy_init
-        
+
     def rotation_matrix_to_quaternion(self, R):
         # Ensure the matrix is a valid rotation matrix (orthogonal with determinant 1)
         trace = cs.trace(R)
@@ -210,11 +254,20 @@ class RobotModel(KinDynComputations):
 
         return cs.vertcat(w, x, y, z)
 
-    def get_mujoco_urdf_string(self):
+    def get_mujoco_urdf_string(self) -> str:
         ## We first start by ET
         tempFileOut = tempfile.NamedTemporaryFile(mode="w+")
-        tempFileOut.write(copy.deepcopy(self.urdf_string))
-        root = ET.fromstring(self.urdf_string)
+        tempFileOut.write(copy.deepcopy(self.urdf_path))
+
+        with open(tempFileOut.name, "r") as file:
+            data = file.read()
+
+        parser = ET.XMLParser(encoding="utf-8")
+        tree = ET.parse(self.urdf_path, parser=parser)
+        root = tree.getroot()
+        has_root_link = "root" in [l.attrib['name'] for l in root.findall(".//link")]
+        if not has_root_link:
+            raise ValueError("The URDF file must have a link named 'root'")
         self.mujoco_joint_order = []
         # Declaring as fixed the not controlled joints
         for joint in root.findall(".//joint"):
@@ -276,11 +329,13 @@ class RobotModel(KinDynComputations):
         mujoco_el.append(compiler_el)
         robot_el.append(mujoco_el)
         # Convert the XML tree to a string
-        robot_urdf_string_original = ET.tostring(root)
+        robot_urdf_string_original = ET.tostring(root, encoding="unicode")
         return robot_urdf_string_original
 
     def get_mujoco_model(self):
         urdf_string = self.get_mujoco_urdf_string()
+        with open("temp.urdf", "w+") as f:
+            f.write(urdf_string)
 
         mujoco_model = mujoco.MjModel.from_xml_string(urdf_string)
         path_temp_xml = tempfile.NamedTemporaryFile(mode="w+")
