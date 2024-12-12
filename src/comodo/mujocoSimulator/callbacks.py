@@ -4,6 +4,7 @@ from comodo.mujocoSimulator.mjcontactinfo import MjContactInfo
 import types
 import logging
 import mujoco
+import copy
 
 class Callback(ABC):
     def __init__(self, *args, **kwargs) -> None:
@@ -43,7 +44,6 @@ class EarlyStoppingCallback(Callback):
 
     def on_simulation_end(self) -> None:
         pass
-            
 
 
 class ScoreCallback(Callback):
@@ -69,7 +69,6 @@ class ScoreCallback(Callback):
 class TrackerCallback(Callback):
     def __init__(self, tracked_variables: list, print_values: bool | list = False, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.score = 0
         self.tracked_variables = tracked_variables
 
         if isinstance(print_values, list):
@@ -90,30 +89,29 @@ class TrackerCallback(Callback):
         for var in self.tracked_variables:
             if isinstance(var, str):
                 try:
-                    val = eval(f"data.{var}")
+                    v = eval(f"data.{var}")
                     if not var in self.vals:
                         self.vals[var] = []
-                    self.vals[var].append(val)
+                    self.vals[var].append(copy.deepcopy(v))
                     if self.print_values[self.tracked_variables.index(var)]:
-                        print(f"{var}: {val}")
+                        print(f"{var}: {v}")
                 except:
                     print(f"Error: {self.tracked_variables} not found in data")
             elif isinstance(var, types.FunctionType):
-                val = var(t, iter, data, opts, *self.args, **self.kwargs)
+                v = var(t, iter, data, opts, *self.args, **self.kwargs)
                 if not var.__name__ in self.vals:
                     self.vals[var.__name__] = []
-                if not isinstance(val, (int, float)):
+                if not isinstance(v, (int, float)):
                     return
-                self.vals[var.__name__].append(val)
+                self.vals[var.__name__].append(v)
                 if self.print_values[self.tracked_variables.index(var)]:
-                    print(f"{var.__name__}: {val}")
+                    print(f"{var.__name__}: {v}")
 
     def on_simulation_end(self) -> None:
         pass
 
     def get_tracked_values(self):
         return self.t, self.vals
-    
 
 
 class ContactCallback(Callback):
