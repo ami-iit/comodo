@@ -118,7 +118,7 @@ class RobotModel(KinDynComputations):
         root_link_rotation = np.eye(3)
         quat_to_transf = self.from_quaternion_to_matrix()
         H_b = quat_to_transf(self.quat_pose_b)
-        H_left_foot = self.H_left_foot(H_b, self.s)
+        H_left_foot = self.H_left_foot(H_b, self.s)   
         quat_left_foot = self.rotation_matrix_to_quaternion(H_left_foot[:3, :3])
         H_right_foot = self.H_right_foot(H_b, self.s)
         quat_right_foot = self.rotation_matrix_to_quaternion(H_right_foot[:3, :3])

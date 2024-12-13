@@ -38,7 +38,6 @@ class MujocoSimulator(Simulator):
         self.H_right_foot_num = None 
         self.mass = self.robot_model.get_total_mass()
 
-
     def get_contact_status(self):
         left_wrench, rigth_wrench = self.get_feet_wrench()
         left_foot_contact = left_wrench[2] > 0.1*self.mass
@@ -61,11 +60,11 @@ class MujocoSimulator(Simulator):
         pos_muj = self.convert_vector_to_mujoco(pos)
         indexes_joint = self.model.jnt_qposadr[1:]
         for i in range(self.robot_model.NDoF):
-            self.data.qpos[indexes_joint[i]] = pos_muj[i]
+            self.data.qpos[indexes_joint[i]] = pos[i]
 
     def set_input(self, input):
         input_muj = self.convert_vector_to_mujoco(input)
-        self.data.ctrl = input_muj
+        self.data.ctrl = input
         np.copyto(self.data.ctrl, input_muj)
 
     def set_position_input(self, pos):
@@ -77,6 +76,7 @@ class MujocoSimulator(Simulator):
         # This function creates the to_mujoco map
         self.to_mujoco = []
         for mujoco_joint in self.robot_model.mujoco_joint_order:
+            print(self.robot_model.mujoco_joint_order)
             try:
                 index = self.robot_model.joint_name_list.index(mujoco_joint)
                 self.to_mujoco.append(index)
@@ -95,11 +95,11 @@ class MujocoSimulator(Simulator):
         
     def convert_vector_to_mujoco (self, array_in): 
         out_muj = np.asarray([array_in[self.to_mujoco[item]] for item in range(self.robot_model.NDoF)]) 
-        return out_muj
+        return array_in
     
     def convert_from_mujoco(self, array_muj):
         out_classic = np.asarray([array_muj[self.from_mujoco[item]] for item in range(self.robot_model.NDoF)]) 
-        return out_classic
+        return array_muj
 
     def step(self, n_step=1, visualize=True):
         if self.postion_control:
