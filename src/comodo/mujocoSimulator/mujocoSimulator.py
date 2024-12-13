@@ -3,11 +3,15 @@ from comodo.robotModel.robotModel import RobotModel
 from comodo.mujocoSimulator.callbacks import Callback
 from comodo.mujocoSimulator.mjcontactinfo import MjContactInfo
 from typing import Dict, List
+from PIL import Image
+import cv2
+import subprocess
+import shutil
 import mujoco
 import math
 import numpy as np
+import os
 import mujoco_viewer
-import copy
 import logging
 import pathlib
 import tempfile
@@ -15,7 +19,7 @@ import casadi as cs
 
 
 class MujocoSimulator(Simulator):
-    def __init__(self, logger: logging.Logger = None, log_dir: str = "") -> None:
+    def __init__(self, logger: logging.Logger = None, log_dir: str = "", video_path: str | os.PathLike = "") -> None:
         self.robot_model = None
         self.model = None
         self.desired_pos = None
@@ -24,6 +28,17 @@ class MujocoSimulator(Simulator):
         self.t = 0
         self.iter = 0
         self.contacts = []
+
+        # Set up video recording
+        video_path = str(video_path)
+        self.save_video = video_path != ""
+        self.video_path = video_path
+        # create a temporary directory to store the frames
+        if self.save_video:
+            self.video_tmp_dir = pathlib.Path("/tmp/frames")
+            shutil.rmtree(self.video_tmp_dir, ignore_errors=True)
+            self.video_tmp_dir.mkdir(exist_ok=True)
+        self.imgs = []
         self._setup_logger(logger, log_dir)
         self.compute_misalignment_gravity_fun()
         super().__init__()
@@ -65,6 +80,7 @@ class MujocoSimulator(Simulator):
             self.logger.error(f"Failed to load the model: {e}. Dumped the model to failed_mujoco.xml")
             raise
         self.data = mujoco.MjData(self.model)
+        self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data, 'offscreen') if self.save_video else None
         self.create_mapping_vector_from_mujoco()
         self.create_mapping_vector_to_mujoco()
         mujoco.mj_forward(self.model, self.data)
@@ -94,7 +110,6 @@ class MujocoSimulator(Simulator):
         frame_pose = self.robot_model.forward_kinematics(frame_name, base_pose, joint_values)
         return frame_pose
 
-
     def get_contact_status(self) -> tuple:
         """
         Determines the contact status of the left and right feet.
@@ -118,7 +133,8 @@ class MujocoSimulator(Simulator):
             visualize_robot (bool): A flag indicating whether to visualize the robot.
         """
 
-        self.visualize_robot_flag = visualize_robot
+
+        self.visualize_robot_flag = visualize_robot and not self.save_video
         if self.visualize_robot_flag:
             self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data)
 
@@ -128,8 +144,8 @@ class MujocoSimulator(Simulator):
 
         Args:
             xyz_rpy (array-like): A 6-element array where the first three elements represent the 
-                      position (x, y, z) and the last three elements represent the 
-                      orientation in roll, pitch, and yaw (rpy) angles.
+            position (x, y, z) and the last three elements represent the 
+            orientation in roll, pitch, and yaw (rpy) angles.
         Returns:
             None
         Notes:
@@ -156,7 +172,7 @@ class MujocoSimulator(Simulator):
         Returns:
             None
         """
-        
+
         pos_muj = self.convert_vector_to_mujoco(pos)
         indexes_joint = self.model.jnt_qposadr[1:]
         for i in range(self.robot_model.NDoF):
@@ -310,6 +326,12 @@ class MujocoSimulator(Simulator):
   
         if self.visualize_robot_flag:
             self.viewer.render()
+        else:
+            if self.save_video:
+                frame = self.viewer.read_pixels()
+                filename = self.video_tmp_dir / f"{self.iter:04d}.png"
+                self.logger.debug(f"Saving frame {self.iter:04d} to {filename}")
+                img = Image.fromarray(frame).save(filename)
 
     def step_with_motors(self, n_step, torque) -> None:
         """
@@ -545,15 +567,6 @@ class MujocoSimulator(Simulator):
         tau_out = self.convert_from_mujoco(tau)
         return s_out, s_dot_out, tau_out
 
-    def close(self) -> None:
-        """
-        Closes the simulator viewer if the visualization flag is set.
-        This method checks if the `visualize_robot_flag` is True. If it is, it closes the viewer associated with the simulator.
-        """
-
-        if self.visualize_robot_flag:
-            self.viewer.close()
-
     def visualize_robot(self) -> None:
         self.viewer.render()
 
@@ -598,15 +611,6 @@ class MujocoSimulator(Simulator):
 
         return [qw, qx, qy, qz]
 
-    def close_visualization(self) -> None:
-        """
-        Closes the visualization window if it is open.
-        This method checks if the `visualize_robot_flag` is True. If it is, it closes the viewer associated with the simulator.
-        """
-
-        if self.visualize_robot_flag:
-            self.viewer.close()
-
     def run(self, tf: float,  callbacks: List[Callback] = [], visualise: bool = False) -> None:
         """
         Run the simulation.
@@ -636,7 +640,46 @@ class MujocoSimulator(Simulator):
                 break
         for callback in callbacks:
             callback.on_simulation_end()
+
+    def close_visualization(self) -> None:
+        """
+        Closes the visualization window if it is open.
+        This method checks if the `visualize_robot_flag` is True. If it is, it closes the viewer associated with the simulator.
+        """
+
+        if self.visualize_robot_flag:
+            self.viewer.close()
+        
+        if self.save_video:
+            self.logger.info(f"Creating video at {self.video_path}")
+            subprocess.run(
+                [
+                    "ffmpeg",
+                    "-y",
+                    "-framerate",
+                    "60",
+                    "-i",
+                    str(self.video_tmp_dir / "%04d.png"),
+                    "-c:v",
+                    "libx264",
+                    "-pix_fmt",
+                    "yuv420p",
+                    self.video_path,
+                ]
+            )
+            shutil.rmtree(self.video_tmp_dir, ignore_errors=True)
+            
          
+    def close(self) -> None:
+        """
+        Closes the simulator viewer if the visualization flag is set.
+        This method checks if the `visualize_robot_flag` is True. If it is, it closes the viewer associated with the simulator.
+        """
+
+        self.close_visualization()
+        if self.visualize_robot_flag:
+            self.viewer.close()
+
     def reset(self) -> None:
         """
         Resets the simulator to the initial state.
