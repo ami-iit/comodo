@@ -41,8 +41,9 @@ class CentroidalMPC(Planner):
         nu = np.concatenate((self.w_b, self.s_dot))
         H = Jcm.toNumPy() @ nu
         dcom = self.centroidal_integrator.get_solution()[1]
+        com = self.centroidal_integrator.get_solution()[0]
         angular_mom = self.centroidal_integrator.get_solution()[2]
-        self.centroidal_mpc.set_state(com.toNumPy(), dcom, angular_mom)
+        self.centroidal_mpc.set_state(com, dcom, angular_mom)
 
         self.centroidal_mpc.set_reference_trajectory(
             self.com_traj, self.angular_mom_trak

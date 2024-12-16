@@ -99,7 +99,7 @@ class TSIDController(Controller):
 
         postural_Kp = tsid_parameters.postural_Kp
         # postural_Kp = np.ones(self.robot_model.NDoF)
-        Kd_postural = 0 * np.power(postural_Kp, 1 / 2)
+        Kd_postural = tsid_parameters.postural_kd
         ## Joint regularziation task --> Task aiming at tracking desired joint trajectory COST
         self.joint_regularization_task = blf.tsid.JointTrackingTask()
         self.joint_regularization_param_handler = (

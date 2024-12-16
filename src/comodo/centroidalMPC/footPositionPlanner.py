@@ -54,7 +54,7 @@ class FootPositionPlanner:
         contact.name = "contactLeft1"
         self.contact_list_left_foot.add_contact(contact)
 
-        leftPosition[0] += float(self.step_length * self.scaling_pos)
+        leftPosition[0] += float(0.05 * self.scaling_pos)
         # print(leftPosition.shape)
         contact.pose = manif.SE3(position=leftPosition, quaternion=quaternion)
         contact.activation_time = timedelta(seconds=2.0 * self.scaling)

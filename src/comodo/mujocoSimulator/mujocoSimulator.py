@@ -14,11 +14,15 @@ class MujocoSimulator(Simulator):
         self.compute_misalignment_gravity_fun()
         super().__init__()
 
-    def load_model(self, robot_model, s, xyz_rpy, kv_motors=None, Im=None):
+    def load_model(self, robot_model, s, xyz_rpy, kv_motors=None, Im=None, mujoco_path = None):
         self.robot_model = robot_model
-        
-        mujoco_xml = robot_model.get_mujoco_model()
-        self.model = mujoco.MjModel.from_xml_string(mujoco_xml)
+        if(mujoco_path is None):
+            mujoco_xml = robot_model.get_mujoco_model()
+            self.model = mujoco.MjModel.from_xml_string(mujoco_xml)
+        else: 
+
+            mujoco_xml = robot_model.get_mujoco_model()
+            self.model  = mujoco.MjModel.from_xml_path(mujoco_path)
         self.data = mujoco.MjData(self.model)
         self.create_mapping_vector_from_mujoco()
         self.create_mapping_vector_to_mujoco()
@@ -76,7 +80,6 @@ class MujocoSimulator(Simulator):
         # This function creates the to_mujoco map
         self.to_mujoco = []
         for mujoco_joint in self.robot_model.mujoco_joint_order:
-            print(self.robot_model.mujoco_joint_order)
             try:
                 index = self.robot_model.joint_name_list.index(mujoco_joint)
                 self.to_mujoco.append(index)
@@ -282,6 +285,9 @@ class MujocoSimulator(Simulator):
 
     def get_simulation_frequency(self):
         return self.model.opt.timestep
+
+    def set_simulation_frequency(self, time_step):
+        self.model.opt.timestep = time_step
 
     def RPY_to_quat(self, roll, pitch, yaw):
         cr = math.cos(roll / 2)
