@@ -2,7 +2,7 @@ from comodo.abstractClasses.simulator import Simulator
 from comodo.robotModel.robotModel import RobotModel
 from comodo.mujocoSimulator.callbacks import Callback
 from comodo.mujocoSimulator.mjcontactinfo import MjContactInfo
-from comodo.mujocoSimulator.visualiser import MujocoVideoRecorder
+from comodo.mujocoSimulator.visualiser import MujocoVideoRecorder, RenderOptions
 from typing import Dict, List
 from PIL import Image
 import cv2
@@ -20,7 +20,7 @@ import casadi as cs
 
 
 class MujocoSimulator(Simulator):
-    def __init__(self, logger: logging.Logger = None, log_dir: str = "", video_path: str | os.PathLike = "") -> None:
+    def __init__(self, logger: logging.Logger = None, log_dir: str = "", video_path: str | os.PathLike = "", render_options: RenderOptions | None = None) -> None:
         self.robot_model = None
         self.model = None
         self.desired_pos = None
@@ -34,6 +34,8 @@ class MujocoSimulator(Simulator):
         video_path = str(video_path)
         self.save_video = video_path != ""
         self.video_path = video_path
+        self.render_options = render_options if render_options is not None else RenderOptions()
+
         self._setup_logger(logger, log_dir)
         self.compute_misalignment_gravity_fun()
         super().__init__()
@@ -75,9 +77,12 @@ class MujocoSimulator(Simulator):
             self.logger.error(f"Failed to load the model: {e}. Dumped the model to failed_mujoco.xml")
             raise
         self.data = mujoco.MjData(self.model)
-        self.recorder = MujocoVideoRecorder(
-            self.model, self.data
-        )
+        if self.save_video:
+            self.recorder = MujocoVideoRecorder(
+                self.model, self.data, self.render_options
+            )
+        print(f"Created recorder: {self.recorder}")
+
         self.create_mapping_vector_from_mujoco()
         self.create_mapping_vector_to_mujoco()
         mujoco.mj_forward(self.model, self.data)
@@ -132,6 +137,7 @@ class MujocoSimulator(Simulator):
 
         self.visualize_robot_flag = visualize_robot and not self.save_video
         if self.visualize_robot_flag:
+            self.logger.info("Initializing the Mujoco viewer")
             self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data)
 
     def set_base_pose_in_mujoco(self, xyz_rpy) -> None:
@@ -637,9 +643,11 @@ class MujocoSimulator(Simulator):
         """
 
         if self.visualize_robot_flag:
+            self.logger.info("Closing the Mujoco viewer")
             self.viewer.close()
         if self.save_video:
-            self.recorder.write_video(self.video_path)
+            self.logger.info(f"Writing video to {self.video_path}")
+            #self.recorder.write_video(self.video_path)
 
     def reset(self) -> None:
         """
