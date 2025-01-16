@@ -51,14 +51,16 @@ class TSIDController(Controller):
             value=self.robot_acceleration_variable_name,
         )
         self.controller_variable_handler.set_parameter_string(
-            name="joint_torques_variable_name", value=self.joint_torques_variable_name
+            name="joint_torques_variable_name",
+            value=self.joint_torques_variable_name,
         )
         vector_string_contact = [
             self.variable_name_left_contact,
             self.variable_name_right_contact,
         ]
         self.controller_variable_handler.set_parameter_vector_string(
-            name="contact_wrench_variables_name", value=vector_string_contact
+            name="contact_wrench_variables_name",
+            value=vector_string_contact,
         )
         self.controller.initialize(self.controller_variable_handler)
         self.define_varible_handler()
@@ -136,7 +138,7 @@ class TSIDController(Controller):
         )
         self.left_foot_param_handler.set_parameter_int(name="number_of_slices", value=2)
         self.left_foot_param_handler.set_parameter_float(
-            name="static_friction_coefficient", value=1.0
+            name="static_friction_coefficient", value=0.33
         )
         self.left_foot_param_handler.set_parameter_vector_float(
             name="foot_limits_x", value=[-0.12, 0.12]
@@ -175,6 +177,38 @@ class TSIDController(Controller):
         self.right_foot_wrench_task.set_kin_dyn(self.kindyn)
         self.right_foot_wrench_task.initialize(
             param_handler=self.right_foot_param_handler
+        )
+
+        ## Left foot wrench regularization task --> Providing reference from MPC.
+        self.left_foot_wrench_reg_task = blf.tsid.VariableRegularizationTask()
+        self.left_foot_wrench_reg_task_name = "left_foot_wrench_reg_task"
+        self.left_foot_wrench_reg_priority = 1
+        self.left_foot_wrench_reg_weight = np.array([10.0] * 3 + [0] * 3)
+        self.left_foot_wrench_reg_param_handler = (
+            blf.parameters_handler.StdParametersHandler()
+        )
+        self.left_foot_wrench_reg_param_handler.set_parameter_string(
+            "variable_name", self.variable_name_left_contact
+        )
+        self.left_foot_wrench_reg_param_handler.set_parameter_int("variable_size", 6)
+        self.left_foot_wrench_reg_task.initialize(
+            param_handler=self.left_foot_wrench_reg_param_handler
+        )
+
+        ## Right foot wrench regularization task --> Providing reference from MPC.
+        self.right_foot_wrench_reg_task = blf.tsid.VariableRegularizationTask()
+        self.right_foot_wrench_reg_task_name = "right_foot_wrench_reg_task"
+        self.right_foot_wrench_reg_priority = 1
+        self.right_foot_wrench_reg_weight = np.array([10.0] * 3 + [0] * 3)
+        self.right_foot_wrench_reg_param_handler = (
+            blf.parameters_handler.StdParametersHandler()
+        )
+        self.right_foot_wrench_reg_param_handler.set_parameter_string(
+            "variable_name", self.variable_name_right_contact
+        )
+        self.right_foot_wrench_reg_param_handler.set_parameter_int("variable_size", 6)
+        self.right_foot_wrench_reg_task.initialize(
+            param_handler=self.right_foot_wrench_reg_param_handler
         )
 
         ## Base"" Dynamics Task --> Base dynamic constraint
@@ -323,6 +357,18 @@ class TSIDController(Controller):
             self.right_foot_wrench_priority,
         )
         self.controller.add_task(
+            self.left_foot_wrench_reg_task,
+            self.left_foot_wrench_reg_task_name,
+            self.left_foot_wrench_reg_priority,
+            self.left_foot_wrench_reg_weight,
+        )
+        self.controller.add_task(
+            self.right_foot_wrench_reg_task,
+            self.right_foot_wrench_reg_task_name,
+            self.right_foot_wrench_reg_priority,
+            self.right_foot_wrench_reg_weight,
+        )
+        self.controller.add_task(
             self.joint_dynamic_task,
             self.joint_dynamic_task_name,
             self.joint_dynamic_task_priority,
@@ -444,17 +490,16 @@ class TSIDController(Controller):
             left_contact=left_foot_desired.is_in_contact,
             right_contact=right_foot_desired.is_in_contact,
         )
+
+        # Regularize the joints with the desired positions
         self.joint_regularization_task.set_set_point(s_desired)
-        # self.angular_momentum_task.set_set_point(np.zeros(3), np.zeros(3))
-        wrench_desired_left = np.zeros(6)
-        wrench_desired_right = np.zeros(6)
-        # mass = self.robot_model.get_total_mass()
-        # wrench_desired[2] = -(mass*9.81/2)
-        # wrench_desiredp[]
-        wrench_desired_left[:3] = wrenches_left
-        wrench_desired_right[:3] = wrenches_right
-        # self.left_foot_regularization_task.set_set_point(wrench_desired_left)
-        # self.right_foot_regularization_task.set_set_point(wrench_desired_right)
+
+        # Regularize the feet wrenches with the planned ones
+        mass = self.kindyn.model().getTotalMass()
+        wrench_desired_left = mass * wrenches_left
+        wrench_desired_right = mass * wrenches_right
+        self.left_foot_wrench_reg_task.set_set_point(wrench_desired_left)
+        self.right_foot_wrench_reg_task.set_set_point(wrench_desired_right)
 
     def update_com_task(self):
 
