@@ -26,10 +26,9 @@ mesalib = ">=24.2.4,<25"
 notebook = ">=7.2.2,<8"
 ipykernel = ">=6.29.5,<7"
 resolve-robotics-uri-py = ">=0.3.0,<0.4"
+adam-robotics = ">=0.3.2,<0.4"
 
 [pypi-dependencies]
-# TODO: move adam-robotics package to conda dependencies as soon as PR https://github.com/ami-iit/adam/pull/100 is merged
-adam-robotics = { git = "https://github.com/ami-iit/adam.git", rev = "main" }
 urdfmodifiers = { git = "https://github.com/CarlottaSartore/urdf-modifiers.git", rev = "scalar_modification" }
 comodo = { path = ".", editable = true }
 
