@@ -3,6 +3,7 @@ import math
 
 import casadi as cs
 import jax
+import mediapy as media
 import mujoco
 import mujoco_viewer
 import numpy as np
@@ -17,6 +18,7 @@ class MJXSimulator(Simulator):
         self.postion_control = False
         self.compute_misalignment_gravity_fun()
         self.jit_step = jax.jit(mjx.step)
+        self.framerate = 30
         super().__init__()
 
     def load_model(self, robot_model, s, xyz_rpy, kv_motors=None, Im=None):
@@ -27,6 +29,8 @@ class MJXSimulator(Simulator):
         # Load mujoco model and data
         mujoco_model = mujoco.MjModel.from_xml_string(mujoco_xml)
         mujoco_data = mujoco.MjData(mujoco_model)
+        self.mj_model = mujoco_model
+        self.mj_data = mujoco_data
 
         # Put the model and data on the accelerator device(s) and get the corresponding MJX model and data
         self.model = mjx.put_model(mujoco_model)
@@ -59,7 +63,9 @@ class MJXSimulator(Simulator):
     def set_visualize_robot_flag(self, visualize_robot):
         self.visualize_robot_flag = visualize_robot
         if self.visualize_robot_flag:
-            self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data)
+            # self.viewer = mujoco_viewer.MujocoViewer(self.model, self.data)
+            self.renderer = mujoco.Renderer(self.mj_model)
+            self.frames = []
 
     def set_base_pose_in_mujoco(self, xyz_rpy):
         base_xyz_quat = np.zeros(7)
@@ -146,8 +152,10 @@ class MJXSimulator(Simulator):
                 # mjx.mj_step1(self.model, self.data)
                 # mjx.mj_forward(self.model, self.data)
 
-        if self.visualize_robot_flag:
-            self.viewer.render()
+        if len(self.frames) < self.data.time * self.framerate:
+            self.visualize_robot()
+        # if self.visualize_robot_flag:
+        #     self.viewer.render()
 
     def step_with_motors(self, n_step, torque):
         indexes_joint_acceleration = self.model.jnt_dofadr[1:]
@@ -167,8 +175,8 @@ class MJXSimulator(Simulator):
 
             self.set_input(input)
             self.step(n_step=1, visualize=False)
-        if self.visualize_robot_flag:
-            self.viewer.render()
+        # if self.visualize_robot_flag:
+        #     self.viewer.render()
 
     def compute_misalignment_gravity_fun(self):
         H = cs.SX.sym("H", 4, 4)
@@ -300,7 +308,11 @@ class MJXSimulator(Simulator):
             self.viewer.close()
 
     def visualize_robot(self):
-        self.viewer.render()
+        # self.viewer.render()
+        mj_data = mjx.get_data(self.mj_model, self.data)
+        self.renderer.update_scene(mj_data)
+        pixels = self.renderer.render()
+        self.frames.append(pixels)
 
     def get_simulation_time(self):
         return self.data.time
@@ -325,4 +337,5 @@ class MJXSimulator(Simulator):
 
     def close_visualization(self):
         if self.visualize_robot_flag:
-            self.viewer.close()
+            # self.viewer.close()
+            media.show_video(self.frames, fps=self.framerate)
