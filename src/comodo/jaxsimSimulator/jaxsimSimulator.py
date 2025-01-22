@@ -12,7 +12,7 @@ import jaxsim.api as js
 import jaxsim.rbda.contacts
 import numpy as np
 import numpy.typing as npt
-from jaxsim import VelRepr, integrators
+from jaxsim import VelRepr
 from jaxsim.mujoco import MujocoVideoRecorder
 from jaxsim.mujoco.loaders import UrdfToMjcf
 from jaxsim.mujoco.model import MujocoModelHelper
@@ -66,7 +66,7 @@ class JaxsimSimulator(Simulator):
 
         # Step aux dict.
         # This is used only for variable-step integrators.
-        self._step_aux_dict: dict[str, Any]= {}
+        self._step_aux_dict: dict[str, Any] = {}
 
         # Time step for the simulation
         self._dt: float = dt
@@ -306,10 +306,9 @@ class JaxsimSimulator(Simulator):
 
             if self._contact_model_type is JaxsimContactModelEnum.VISCO_ELASTIC:
 
-                self._data, _ = jaxsim.rbda.contacts.visco_elastic.step(
+                self._data = jaxsim.rbda.contacts.visco_elastic.step(
                     model=self._model,
                     data=self._data,
-                    dt=self._dt,
                     link_forces=None,
                     joint_force_references=self._tau,
                 )
@@ -317,15 +316,11 @@ class JaxsimSimulator(Simulator):
             else:
 
                 # All other contact models
-                self._data, self._step_aux_dict = js.model.step(
+                self._data = js.model.step(
                     model=self._model,
                     data=self._data,
-                    dt=self._dt,
                     link_forces=None,
                     joint_force_references=self._tau,
-                    integrator_metadata=self._step_aux_dict.get(
-                        "integrator_metadata", None
-                    ),
                 )
 
             if not dry_run:
@@ -351,7 +346,7 @@ class JaxsimSimulator(Simulator):
 
             with self._data.switch_velocity_representation(VelRepr.Mixed):
 
-                self._link_contact_forces = js.model.link_contact_forces(
+                self._link_contact_forces = js.contact_model.link_contact_forces(
                     model=self._model,
                     data=self._data,
                     joint_force_references=self._tau,
