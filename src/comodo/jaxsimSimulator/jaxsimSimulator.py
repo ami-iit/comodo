@@ -318,7 +318,6 @@ class JaxsimSimulator(Simulator):
                 self._data = js.model.step(
                     model=self._model,
                     data=self._data,
-                    link_forces=None,
                     joint_force_references=self._tau,
                 )
 
@@ -348,7 +347,7 @@ class JaxsimSimulator(Simulator):
                 self._link_contact_forces = js.contact_model.link_contact_forces(
                     model=self._model,
                     data=self._data,
-                    joint_force_references=self._tau,
+                    joint_torques=self._tau,
                 )
 
     def get_state(self) -> tuple[npt.NDArray, npt.NDArray, npt.NDArray]:
