@@ -223,7 +223,6 @@ class JaxsimSimulator(Simulator):
             base_position=jnp.array(xyz_rpy[:3]),
             base_quaternion=jnp.array(JaxsimSimulator._RPY_to_quat(*xyz_rpy[3:])),
             joint_positions=jnp.array(s),
-            contacts_params=contact_params,
         )
 
         # Initialize tau to zero
@@ -369,8 +368,8 @@ class JaxsimSimulator(Simulator):
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
 
-        s = np.array(self._data.joint_positions())[self._to_user]
-        s_dot = np.array(self._data.joint_velocities())[self._to_user]
+        s = np.array(self._data.joint_positions)[self._to_user]
+        s_dot = np.array(self._data.joint_velocities)[self._to_user]
         tau = np.array(self._tau)[self._to_user]
 
         return s, s_dot, tau
@@ -400,7 +399,7 @@ class JaxsimSimulator(Simulator):
         assert (
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
-        return np.array(self._data.base_transform())
+        return np.array(self._data.base_transform)
 
     @property
     def base_velocity(self) -> npt.NDArray:
@@ -523,26 +522,26 @@ class JaxsimSimulator(Simulator):
             self._handle = self._viz.open_viewer()
 
         self._mj_model_helper.set_base_position(
-            position=np.array(self._data.base_position()),
+            position=np.array(self._data.base_position),
         )
         self._mj_model_helper.set_base_orientation(
             orientation=np.array(self._data.base_orientation()),
         )
         self._mj_model_helper.set_joint_positions(
-            positions=np.array(self._data.joint_positions()),
+            positions=np.array(self._data.joint_positions),
             joint_names=self._model.joint_names(),
         )
         self._viz.sync(viewer=self._handle)
 
     def _record_frame(self) -> None:
         self._mj_model_helper.set_base_position(
-            position=np.array(self._data.base_position()),
+            position=np.array(self._data.base_position),
         )
         self._mj_model_helper.set_base_orientation(
             orientation=np.array(self._data.base_orientation()),
         )
         self._mj_model_helper.set_joint_positions(
-            positions=np.array(self._data.joint_positions()),
+            positions=np.array(self._data.joint_positions),
             joint_names=self._model.joint_names(),
         )
 
