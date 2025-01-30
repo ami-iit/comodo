@@ -81,7 +81,7 @@ pip install drake git+https://github.com/ami-iit/amo_urdf
 
 An alternative and easy way to use comodo is with [`pixi`](https://pixi.sh/latest/) package manager. It automatically handles the creation and activation of virtual environments in which to use the different simulators that comodo supports.
 
-At the moment there is an environment associated with each simulator backend, namely:
+At the moment there is an environment associated with each simulation or planning backend, namely:
 -  `mujoco`: for MuJoCo simulator
 - `jaxsim`: for JaxSim simulator
 - `drake`: for Drake simulator
