@@ -1,0 +1,41 @@
+[project]
+name = "comodo"
+dynamic = ["version"]
+requires-python = ">= 3.8"
+description = "Suite of parametrized controller with simulation environment for co-design of Humanoid Robots."
+authors = [
+    { name = "Carlotta Sartore", email = "carlotta.elena.sartore@gmail.com" },
+]
+license.file = "LICENSE"
+dependencies = [
+    "casadi",
+    "numpy",
+    "idyntree",
+    "adam-robotics",
+    "mujoco",
+    "mujoco-python-viewer",
+    "matplotlib",
+    "gitpython",
+    "urchin",
+    "bipedal-locomotion-framework",
+]
+
+[project.readme]
+file = "README.md"
+content-type = "text/markdown"
+
+[project.urls]
+Changelog = "https://github.com/ami-iit/comodo/releases"
+Source = "https://github.com/ami-iit/comodo"
+Tracker = "https://github.com/ami-iit/comodo/issues"
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = [
+    "setuptools>=75",
+    "wheel",
+]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
