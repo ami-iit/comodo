@@ -176,12 +176,8 @@ class JaxsimSimulator(Simulator):
             model_description=robot_model.urdf_string,
             model_name=robot_model.robot_name,
             contact_model=contact_model,
+            contact_params=contact_params,
             time_step=self._dt,
-        )
-
-        self._model = js.model.reduce(
-            model=model,
-            considered_joints=tuple(robot_model.joint_name_list),
         )
 
         if contact_params is None:
@@ -196,7 +192,7 @@ class JaxsimSimulator(Simulator):
                     )
                 case JaxsimContactModelEnum.VISCO_ELASTIC | JaxsimContactModelEnum.SOFT:
                     contact_params = js.contact.estimate_good_contact_parameters(
-                        model=self._model,
+                        model=model,
                         number_of_active_collidable_points_steady_state=8,
                         max_penetration=0.002_5,
                         damping_ratio=1.0,
@@ -206,6 +202,14 @@ class JaxsimSimulator(Simulator):
                     raise ValueError(
                         f"Invalid contact model type: {self._contact_model_type}"
                     )
+
+        with model.editable(validate=False) as model:
+            model.contact_params = contact_params
+
+        self._model = js.model.reduce(
+            model=model,
+            considered_joints=tuple(robot_model.joint_name_list),
+        )
 
         # Find mapping between user provided joint name list and JaxSim one
         user_joint_names = robot_model.joint_name_list
@@ -344,7 +348,7 @@ class JaxsimSimulator(Simulator):
 
             with self._data.switch_velocity_representation(VelRepr.Mixed):
 
-                self._link_contact_forces = js.contact_model.link_contact_forces(
+                self._link_contact_forces, _ = js.contact_model.link_contact_forces(
                     model=self._model,
                     data=self._data,
                     joint_torques=self._tau,
