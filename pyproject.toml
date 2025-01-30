@@ -39,3 +39,61 @@ requires = [
 [tool.setuptools]
 package-dir = { "" = "src" }
 
+# ==================
+# Pixi Configuration
+# ==================
+
+[tool.pixi.project]
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[tool.pixi.system-requirements]
+libc = "2.35"
+
+[tool.pixi.dependencies]
+adam-robotics = "*"
+bipedal-locomotion-framework = ">=0.19.0,<0.20"
+manifpy = ">=0.0.5,<0.0.6"
+casadi = ">=3.6.7,<4"
+idyntree = "*"
+matplotlib = "*"
+urllib3 = "*"
+urchin = "*"
+mesalib = "*"
+notebook = "*"
+ipykernel = "*"
+resolve-robotics-uri-py = "*"
+
+[tool.pixi.pypi-dependencies]
+urdfmodifiers = { git = "https://github.com/CarlottaSartore/urdf-modifiers.git", rev = "scalar_modification" }
+comodo = { path = ".", editable = true }
+
+[tool.pixi.feature.jaxsim.dependencies]
+jaxsim = ">=0.5.0"
+
+[tool.pixi.feature.mujoco.dependencies]
+mujoco = ">=3.2.0,<4"
+mujoco-python-viewer = ">=0.1.4,<0.2"
+
+[tool.pixi.feature.drake.pypi-dependencies]
+drake = ">=1.34.0, <2"
+amo-urdf = { git = "https://github.com/ami-iit/amo_urdf.git"}
+
+[tool.pixi.feature.drake.dependencies]
+meshio = "*"
+tqdm = "*"
+
+[tool.pixi.feature.hippopt.dependencies]
+liecasadi = "*"
+ffmepg-python = "*"
+meshcat-python = "*"
+
+[tool.pixi.feature.hippopt.pypi-dependencies]
+hippopt = { git = "git+https://github.com/ami-iit/hippopt.git"}
+
+[environments]
+jaxsim = { features = ["jaxsim"], solve-group = "default" }
+mujoco = { features = ["mujoco"], solve-group = "default" }
+drake = { features = ["drake"], solve-group = "default" }
+hippopt = { features = ["hippopt"], solve-group = "default" }
+all = { features = ["jaxsim", "mujoco", "drake"], solve-group = "default" }
