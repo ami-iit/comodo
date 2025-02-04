@@ -408,7 +408,7 @@ class JaxsimSimulator(Simulator):
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
         with self._data.switch_velocity_representation(VelRepr.Mixed):
-            return np.array(self._data.base_velocity())
+            return np.array(self._data.base_velocity)
 
     @property
     def simulation_time(self) -> float:
@@ -526,7 +526,7 @@ class JaxsimSimulator(Simulator):
             position=np.array(self._data.base_position),
         )
         self._mj_model_helper.set_base_orientation(
-            orientation=np.array(self._data.base_orientation()),
+            orientation=np.array(self._data.base_orientation),
         )
         self._mj_model_helper.set_joint_positions(
             positions=np.array(self._data.joint_positions),
@@ -539,7 +539,7 @@ class JaxsimSimulator(Simulator):
             position=np.array(self._data.base_position),
         )
         self._mj_model_helper.set_base_orientation(
-            orientation=np.array(self._data.base_orientation()),
+            orientation=np.array(self._data.base_orientation),
         )
         self._mj_model_helper.set_joint_positions(
             positions=np.array(self._data.joint_positions),
