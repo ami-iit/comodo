@@ -20,8 +20,8 @@ class MujocoSimulator(Simulator):
             mujoco_xml = robot_model.get_mujoco_model()
             self.model = mujoco.MjModel.from_xml_string(mujoco_xml)
         else: 
-
-            mujoco_xml = robot_model.get_mujoco_model()
+            # mujoco_xml = robot_model.get_mujoco_model()
+            self.robot_model.mujoco_joint_order = self.robot_model.joint_name_list 
             self.model  = mujoco.MjModel.from_xml_path(mujoco_path)
         self.data = mujoco.MjData(self.model)
         self.create_mapping_vector_from_mujoco()

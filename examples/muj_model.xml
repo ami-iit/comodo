@@ -1,0 +1,238 @@
+<mujoco model="ergoCub">
+  <compiler angle="radian" meshdir="./meshes/simmechanics/" autolimits="true" />
+  <default />
+  <asset>
+    <mesh name="sim_ecub_r_hip_1_prt" file="sim_ecub_r_hip_1_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_hip_2_prt" file="sim_ecub_r_hip_2_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_hip_3_prt" file="sim_ecub_r_hip_3_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_upper_leg_prt" file="sim_ecub_r_upper_leg_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_lower_leg_prt" file="sim_ecub_r_lower_leg_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_ankle_1_prt" file="sim_ecub_r_ankle_1_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_ankle_2_prt" file="sim_ecub_r_ankle_2_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_foot_rear_prt" file="sim_ecub_r_foot_rear_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_foot_front_prt" file="sim_ecub_r_foot_front_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_hip_1_prt" file="sim_ecub_l_hip_1_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_hip_2_prt" file="sim_ecub_l_hip_2_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_hip_3_prt" file="sim_ecub_l_hip_3_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_upper_leg_prt" file="sim_ecub_l_upper_leg_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_lower_leg_prt" file="sim_ecub_l_lower_leg_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_ankle_1_prt" file="sim_ecub_l_ankle_1_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_ankle_2_prt" file="sim_ecub_l_ankle_2_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_foot_front_prt" file="sim_ecub_l_foot_front_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_foot_rear_prt" file="sim_ecub_l_foot_rear_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_torso_1_prt" file="sim_ecub_torso_1_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_torso_2_prt" file="sim_ecub_torso_2_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_chest_prt" file="sim_ecub_chest_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_head_neck_2_prt" file="sim_ecub_head_neck_2_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_head_neck_3_prt" file="sim_ecub_head_neck_3_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_head_prt" file="sim_ecub_head_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_realsense_prt" file="sim_ecub_realsense_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_shoulder_1_prt" file="sim_ecub_r_shoulder_1_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_shoulder_2_prt" file="sim_ecub_r_shoulder_2_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_shoulder_3_prt" file="sim_ecub_r_shoulder_3_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_upperarm_prt" file="sim_ecub_r_upperarm_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_forearm_prt" file="sim_ecub_r_forearm_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_wrist_1_prt" file="sim_ecub_r_wrist_1_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_wrist_2_prt" file="sim_ecub_r_wrist_2_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_hand_palm_prt" file="sim_ecub_r_hand_palm_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_hand_pinkie_1_prt" file="sim_ecub_r_hand_pinkie_1_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_hand_pinkie_2_prt" file="sim_ecub_r_hand_pinkie_2_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_hand_thumb_1_prt" file="sim_ecub_r_hand_thumb_1_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_hand_thumb_2_prt" file="sim_ecub_r_hand_thumb_2_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_hand_thumb_3_prt" file="sim_ecub_r_hand_thumb_3_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_hand_middle_1_prt" file="sim_ecub_r_hand_middle_1_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_hand_middle_2_prt" file="sim_ecub_r_hand_middle_2_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_hand_ring_1_prt" file="sim_ecub_r_hand_ring_1_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_r_hand_ring_2_prt" file="sim_ecub_r_hand_ring_2_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_shoulder_1_prt" file="sim_ecub_l_shoulder_1_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_shoulder_2_prt" file="sim_ecub_l_shoulder_2_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_shoulder_3_prt" file="sim_ecub_l_shoulder_3_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_upperarm_prt" file="sim_ecub_l_upperarm_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_forearm_prt" file="sim_ecub_l_forearm_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_wrist_1_prt" file="sim_ecub_l_wrist_1_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_wrist_2_prt" file="sim_ecub_l_wrist_2_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_hand_palm_prt" file="sim_ecub_l_hand_palm_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_hand_ring_1_prt" file="sim_ecub_l_hand_ring_1_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_hand_ring_2_prt" file="sim_ecub_l_hand_ring_2_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_hand_index_1_prt" file="sim_ecub_l_hand_index_1_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_hand_index_2_prt" file="sim_ecub_l_hand_index_2_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_hand_index_3_prt" file="sim_ecub_l_hand_index_3_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_hand_middle_1_prt" file="sim_ecub_l_hand_middle_1_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_hand_middle_2_prt" file="sim_ecub_l_hand_middle_2_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_hand_thumb_1_prt" file="sim_ecub_l_hand_thumb_1_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_hand_thumb_2_prt" file="sim_ecub_l_hand_thumb_2_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_hand_thumb_3_prt" file="sim_ecub_l_hand_thumb_3_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_hand_pinkie_1_prt" file="sim_ecub_l_hand_pinkie_1_prt.stl" scale="0.001 0.001 0.001" />
+    <mesh name="sim_ecub_l_hand_pinkie_2_prt" file="sim_ecub_l_hand_pinkie_2_prt.stl" scale="0.001 0.001 0.001" />
+  </asset>
+  <worldbody>
+    <body name="root_link" pos="0 0 0.78" gravcomp="0">
+      <inertial pos="0.00127901 0.000157018 0.334963" quat="0.736432 0.0142072 0.0154965 0.676185" mass="15.7456" diaginertia="0.491199 0.488957 0.0465405" />
+      <joint name="floating_joint" type="free" />
+      <geom pos="0 0 0.1785" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_torso_1_prt" />
+      <geom pos="0 0 0.1785" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_torso_2_prt" />
+      <geom pos="0 0 0.1785" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" rgba="0.3 0.3 0.3 1" mesh="sim_ecub_chest_prt" />
+      <geom pos="0 -5e-05 0.1785" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0"  rgba="0.7 0.7 0.7 1" mesh="sim_ecub_head_neck_2_prt" />
+      <geom pos="0 0 0.1785" quat="0.707107 0 0 0.707107" type="mesh"  contype="0" conaffinity="0" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_head_neck_3_prt" />
+      <geom pos="0 0 0.1785" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0"  rgba="0.7 0.7 0.7 1" mesh="sim_ecub_head_prt" />
+      <geom pos="0 0 0.1785" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" rgba="0 1 0 1" mesh="sim_ecub_realsense_prt" />
+      <body name="r_hip_1" pos="0.0211 -0.0505 0" gravcomp="0">
+        <inertial pos="-0.0040321 -0.0282494 -0.000674" quat="0.471583 0.463949 0.507259 0.552313" mass="2.23209" diaginertia="0.00270348 0.00246138 0.00220385" />
+        <joint name="r_hip_pitch" pos="0 0 0" axis="0 -1 0" range="-0.785398 2.00713" damping="2" />
+        <geom pos="-0.0211 0.0505 0.1785" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_r_hip_1_prt" />
+        <body name="r_hip_2" pos="-0.04725 -0.0331 -0.009" gravcomp="0">
+          <inertial pos="0.0206737 0.00690112 -0.0935168" quat="0.685131 -0.126138 -0.177679 0.695065" mass="3.9815" diaginertia="0.02644 0.0237871 0.00862537" />
+          <joint name="r_hip_roll" pos="0 0 0" axis="-1 0 0" range="-0.610865 1.95477" damping="2" />
+          <geom pos="0.0262 0.0836 0.1875" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_r_hip_2_prt" />
+          <geom pos="0.0262 0.0836 0.1875" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" rgba="0.3 0.3 0.3 1" mesh="sim_ecub_r_hip_3_prt" />
+          <body name="r_upper_leg" pos="0.0367 0.015 -0.1624" quat="1 0 0 5.9369e-07" gravcomp="0">
+            <inertial pos="0.00851748 -0.0144685 -0.12675" quat="0.752216 -0.0338778 -0.00759657 0.658001" mass="2.78492" diaginertia="0.0121302 0.0118863 0.00221412" />
+            <joint name="r_hip_yaw" pos="0 0 0" axis="0 0 -1" range="-1.39626 1.39626" damping="2" />
+            <geom pos="-0.0105 0.0686 0.3499" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_r_upper_leg_prt" />
+            <body name="r_lower_leg" pos="0.0106 0.00789999 -0.1797" quat="0 1 -5.9369e-07 0" gravcomp="0">
+              <inertial pos="0.0011585 0.0062002 0.214259" quat="0.00842304 0.725858 -0.687437 0.0221305" mass="3.74161" diaginertia="0.0473358 0.0460276 0.00468999" />
+              <joint name="r_knee" pos="0 0 0" axis="0 1 0" range="-1.22173 0.0872665" damping="2" />
+              <geom pos="-0.0211 -0.0607 -0.5296" quat="0 0.707107 -0.707107 0" type="mesh" contype="0" conaffinity="0" rgba="0.3 0.3 0.3 1" mesh="sim_ecub_r_lower_leg_prt" />
+              <body name="r_ankle_1" pos="0 0.0319 0.321" quat="0 1 0 0" gravcomp="0">
+                <inertial pos="-0.0013672 -0.0006602 -0.014087" quat="0.416612 0.576846 0.372407 0.595816" mass="0.348128" diaginertia="0.000597996 0.000440984 0.000246481" />
+                <joint name="r_ankle_pitch" pos="0 0 0" axis="0 1 0" range="-0.785398 0.785398" damping="2" />
+                <geom pos="-0.0211 0.0926 0.8506" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_r_ankle_1_prt" />
+                <body name="r_ankle_2" pos="-0.05275 0.0182 -0.035" gravcomp="0">
+                  <inertial pos="0.0575787 -4.46421e-05 -0.0459216" quat="0.433467 0.556899 0.569284 0.421764" mass="2.98403" diaginertia="0.0126381 0.0123128 0.00281249" />
+                  <joint name="r_ankle_roll" pos="0 0 0" axis="-1 0 0" range="-0.436332 0.436332" damping="2" />
+                  <geom pos="0.03165 0.0744 0.8856" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" rgba="0.3 0.3 0.3 1" mesh="sim_ecub_r_ankle_2_prt" />
+                  <geom pos="0.0316 0.0744 0.8856" quat="0.707107 0 0 0.707107" type="mesh" rgba="1 0.51 0 1"  mesh="sim_ecub_r_foot_rear_prt" />
+                  <geom pos="0.03165 0.0744 0.8856" quat="0.707107 0 0 0.707107" type="mesh" rgba="1 0.51 0 1"  mesh="sim_ecub_r_foot_front_prt" />
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="l_hip_1" pos="0.0211 0.0505 0" gravcomp="0">
+        <inertial pos="-0.0040154 0.0282473 -0.000681" quat="0.551419 0.506606 0.463763 0.473509" mass="2.23177" diaginertia="0.00270283 0.00246163 0.00220285" />
+        <joint name="l_hip_pitch" pos="0 0 0" axis="0 -1 0" range="-0.785398 2.00713" damping="2" />
+        <geom pos="-0.0211 -0.0505 0.1785" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_l_hip_1_prt" />
+        <body name="l_hip_2" pos="-0.04725 0.0331 -0.009" gravcomp="0">
+          <inertial pos="0.0206874 -0.00690172 -0.0935735" quat="0.69574 -0.176627 -0.125492 0.684836" mass="3.98136" diaginertia="0.0265634 0.0238959 0.00864075" />
+          <joint name="l_hip_roll" pos="0 0 0" axis="1 0 0" range="-0.610865 1.95477" damping="2" />
+          <geom pos="0.02615 -0.0836 0.1875" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_l_hip_2_prt" />
+          <geom pos="0.02615 -0.0836 0.1875" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" rgba="0.3 0.3 0.3 1" mesh="sim_ecub_l_hip_3_prt" />
+          <body name="l_upper_leg" pos="0.0367 -0.015 -0.1624" gravcomp="0">
+            <inertial pos="0.0085035 0.0144849 -0.126747" quat="0.666541 -0.00759957 -0.0335156 0.744676" mass="2.78492" diaginertia="0.0121286 0.0118796 0.00220771" />
+            <joint name="l_hip_yaw" pos="0 0 0" axis="0 0 1" range="-1.39626 1.39626" damping="2" />
+            <geom pos="-0.01055 -0.0686 0.3499" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_l_upper_leg_prt" />
+            <body name="l_lower_leg" pos="0.0106 -0.0079 -0.1797" quat="0 1 0 0" gravcomp="0">
+              <inertial pos="0.0013845 -0.0061871 0.21426" quat="-0.0218229 0.692096 -0.721423 -0.00870268" mass="3.74161" diaginertia="0.0473316 0.0460262 0.00468891" />
+              <joint name="l_knee" pos="0 0 0" axis="0 1 0" range="-1.22173 0.0872665" damping="2" />
+              <geom pos="-0.02115 0.0607 -0.5296" quat="0 0.707107 -0.707107 0" type="mesh" contype="0" conaffinity="0" rgba="0.3 0.3 0.3 1" mesh="sim_ecub_l_lower_leg_prt" />
+              <body name="l_ankle_1" pos="0 -0.0319 0.321" quat="0 1 0 0" gravcomp="0">
+                <inertial pos="-0.0013852 0.0006602 -0.014087" quat="0.592894 0.375471 0.580004 0.413634" mass="0.348128" diaginertia="0.000597982 0.00044068 0.000246741" />
+                <joint name="l_ankle_pitch" pos="0 0 0" axis="0 1 0" range="-0.785398 0.785398" damping="2" />
+                <geom pos="-0.02115 -0.0926 0.8506" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_l_ankle_1_prt" />
+                <body name="l_ankle_2" pos="-0.05275 -0.0182 -0.035" gravcomp="0">
+                  <inertial pos="0.0575766 -5.0584e-05 -0.0459216" quat="0.429696 0.561483 0.564872 0.425462" mass="2.98403" diaginertia="0.0126364 0.0123084 0.00280439" />
+                  <joint name="l_ankle_roll" pos="0 0 0" axis="1 0 0" range="-0.436332 0.436332" damping="2" />
+                  <geom pos="0.0316 -0.0744 0.8856" quat="0.707107 0 0 0.707107" type="mesh" contype="0" conaffinity="0" rgba="0.3 0.3 0.3 1" mesh="sim_ecub_l_ankle_2_prt" />
+                  <geom pos="0.0316 -0.0744 0.8856" quat="0.707107 0 0 0.707107" type="mesh" rgba="1 0.51 0 1" mesh="sim_ecub_l_foot_front_prt" />
+                  <geom pos="0.0316 -0.0744 0.8856" quat="0.707107 0 0 0.707107" type="mesh" rgba="1 0.51 0 1" mesh="sim_ecub_l_foot_rear_prt" />
+                </body>
+              </body>
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="r_shoulder_1" pos="-0.0135187 -0.0670476 0.36649" quat="0.982708 -0.121688 -0.0429061 0.132799" gravcomp="0">
+        <inertial pos="0.000172398 -0.0678405 0.000475572" quat="0.0238343 -0.0206203 0.702642 0.710846" mass="0.792282" diaginertia="0.00120974 0.0011959 0.000330536" />
+        <joint name="r_shoulder_pitch" pos="0 0 0" axis="-3.35225e-07 1 -2.20686e-07" range="-2.96706 0.610865" damping="2" />
+        <geom pos="0.0214149 0.106413 -0.168036" quat="0.788783 0.116385 -0.055707 0.600977" type="mesh" contype="0" conaffinity="0" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_r_shoulder_1_prt" />
+        <body name="r_shoulder_2" pos="0.00749996 -0.0933001 -6.00683e-07" gravcomp="0">
+          <inertial pos="0.000512067 -0.000143644 -0.0364077" quat="0.681235 0.173027 0.171393 0.690366" mass="0.710693" diaginertia="0.000821732 0.000757933 0.000320608" />
+          <joint name="r_shoulder_roll" pos="0 0 0" axis="-1 1.71286e-07 2.92871e-07" range="-0.261799 2.61799" damping="2" />
+          <geom pos="0.0139014 0.199666 -0.168047" quat="0.788783 0.116385 -0.055707 0.600977" type="mesh" contype="0" conaffinity="0" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_r_shoulder_2_prt" />
+          <geom pos="0.0139014 0.199666 -0.168047" quat="0.788783 0.116385 -0.055707 0.600977" type="mesh" contype="0" conaffinity="0" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_r_shoulder_3_prt" />
+          <body name="r_upperarm" pos="-0.00684991 3.26793e-07 -0.0767999" gravcomp="0">
+            <inertial pos="0.000147064 -0.00233532 -0.0501167" quat="0.797511 -0.0270149 0.0111229 0.602596" mass="1.77224" diaginertia="0.00352538 0.00341395 0.00156994" />
+            <joint name="r_shoulder_yaw" pos="0 0 0" axis="1.71338e-07 -2.36593e-07 1" range="-0.872665 1.39626" damping="2" />
+            <geom pos="0.0207514 0.199666 -0.0912466" quat="0.788783 0.116385 -0.055707 0.600977" type="mesh" contype="0" conaffinity="0" rgba="0 0 0 1" mesh="sim_ecub_r_upperarm_prt" />
+            <body name="r_forearm" pos="0.01 0.00150007 -0.1237" gravcomp="0">
+              <inertial pos="0.00192384 0.00792081 -0.326384" quat="0.613625 0.238162 0.290072 0.694695" mass="1.47607" diaginertia="0.01 0.01 0.01" />
+              <joint name="r_elbow" pos="0 0 0" axis="3.35225e-07 -1 2.20686e-07" range="-0.0523599 1.309" damping="2" />
+              <geom pos="0.0107513 0.198166 0.032453" quat="0.788783 0.116385 -0.055707 0.600977" type="mesh" contype="0" conaffinity="0" rgba="0.3 0.3 0.3 1" mesh="sim_ecub_r_forearm_prt" />
+              <geom pos="0.0107513 0.198166 0.032453" quat="0.788783 0.116385 -0.055707 0.600977" type="mesh" contype="0" conaffinity="0" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_r_wrist_1_prt" />
+              <geom pos="0.0107513 0.198166 0.032453" quat="0.788783 0.116385 -0.055707 0.600977" type="mesh" contype="0" conaffinity="0" rgba="1 0 0 1" mesh="sim_ecub_r_wrist_2_prt" />
+              <geom pos="0.0107513 0.198166 0.032453" quat="0.788783 0.116385 -0.055707 0.600977" type="mesh" contype="0" conaffinity="0" rgba="0 0 1 1" mesh="sim_ecub_r_hand_palm_prt" />
+              <geom pos="0.0107513 0.198166 0.032453" quat="0.788783 0.116385 -0.055707 0.600977" type="mesh" contype="0" conaffinity="0" rgba="1 1 0 1" mesh="sim_ecub_r_hand_pinkie_1_prt" />
+              <geom pos="0.0107514 0.198166 0.032453" quat="0.788783 0.116385 -0.055707 0.600977" type="mesh" contype="0" conaffinity="0" rgba="1 0 1 1" mesh="sim_ecub_r_hand_pinkie_2_prt" />
+              <geom pos="0.0107513 0.198166 0.032453" quat="0.788783 0.116385 -0.055707 0.600977" type="mesh" contype="0" conaffinity="0" rgba="0 1 1 1" mesh="sim_ecub_r_hand_thumb_1_prt" />
+              <geom pos="0.0107513 0.198166 0.032453" quat="0.788783 0.116385 -0.055707 0.600977" type="mesh" contype="0" conaffinity="0" rgba="0 1 0 1" mesh="sim_ecub_r_hand_thumb_2_prt" />
+              <geom pos="0.0107513 0.198166 0.032453" quat="0.788783 0.116385 -0.055707 0.600977" type="mesh" contype="0" conaffinity="0" rgba="1 1 1 1" mesh="sim_ecub_r_hand_thumb_3_prt" />
+              <geom pos="0.0107513 0.198166 0.032453" quat="-0.788783 -0.116385 0.055707 -0.600977" type="mesh" contype="0" conaffinity="0" rgba="0 0 0.8 1" mesh="sim_ecub_r_hand_middle_1_prt" />
+              <geom pos="0.0107513 0.198166 0.032453" quat="-0.788783 -0.116385 0.055707 -0.600977" type="mesh" contype="0" conaffinity="0" rgba="0.1 0.8 0.1 1" mesh="sim_ecub_r_hand_middle_2_prt" />
+              <geom pos="0.0107513 0.198166 0.032453" quat="0.788783 0.116385 -0.055707 0.600977" type="mesh" contype="0" conaffinity="0" mesh="sim_ecub_r_hand_ring_1_prt" />
+              <geom pos="0.0107513 0.198166 0.032453" quat="0.788783 0.116385 -0.055707 0.600977" type="mesh" contype="0" conaffinity="0" rgba="0 1 0 1" mesh="sim_ecub_r_hand_ring_2_prt" />
+            </body>
+          </body>
+        </body>
+      </body>
+      <body name="l_shoulder_1" pos="-0.0135187 0.0670476 0.36649" quat="0.982708 0.121688 -0.0429058 -0.132799" gravcomp="0">
+        <inertial pos="0.000148281 0.0678296 0.000503488" quat="0.0086468 -0.011851 0.711187 0.70285" mass="0.791376" diaginertia="0.00120905 0.00119544 0.000329558" />
+        <joint name="l_shoulder_pitch" pos="0 0 0" axis="1.4959e-07 1 2.72203e-07" range="-2.96706 0.610865" damping="2" />
+        <geom pos="0.0214151 -0.106413 -0.168036" quat="0.600977 -0.0557072 0.116385 0.788783" type="mesh" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_l_shoulder_1_prt" />
+        <body name="l_shoulder_2" pos="0.00500013 0.0932995 -4.34136e-07" gravcomp="0">
+          <inertial pos="0.00302787 0.000128307 -0.0364069" quat="0.68686 0.173186 0.172996 0.684326" mass="0.712399" diaginertia="0.000824775 0.000759006 0.000323849" />
+          <joint name="l_shoulder_roll" pos="0 0 0" axis="1 3.5692e-07 2.72158e-07" range="-0.261799 2.61799" damping="2" />
+          <geom pos="0.0164285 -0.199759 -0.168024" quat="0.600977 -0.0557072 0.116385 0.788783" type="mesh" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_l_shoulder_2_prt" />
+          <geom pos="0.0164285 -0.199759 -0.168024" quat="0.600977 -0.0557072 0.116385 0.788783" type="mesh" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_l_shoulder_3_prt" />
+          <body name="l_upperarm" pos="-0.00435007 2.43599e-07 -0.0768001" gravcomp="0">
+            <inertial pos="0.00013045 0.00225331 -0.0500647" quat="0.610168 0.0102954 -0.0258805 0.791783" mass="1.77085" diaginertia="0.00352386 0.00341014 0.00156558" />
+            <joint name="l_shoulder_yaw" pos="0 0 0" axis="3.93691e-07 -1.85076e-07 -1" range="-0.872665 1.39626" damping="2" />
+            <geom pos="0.0207786 -0.19976 -0.0912239" quat="0.600977 -0.0557072 0.116385 0.788783" type="mesh" rgba="1 1 0 1" mesh="sim_ecub_l_upperarm_prt" />
+            <body name="l_forearm" pos="0.0100001 -0.00150006 -0.1237" gravcomp="0">
+              <inertial pos="0.00192604 -0.00793183 -0.326506" quat="0.693294 0.293184 0.24049 0.612822" mass="1.47607" diaginertia="0.01 0.01 0.01" />
+              <joint name="l_elbow" pos="0 0 0" axis="-1.4959e-07 -1 -2.72203e-07" range="-0.0523599 1.309" damping="2" />
+              <geom pos="0.0107785 -0.19826 0.0324758" quat="0.600977 -0.0557072 0.116385 0.788783" type="mesh"  contype="0" conaffinity="0" rgba="0.3 0.3 0.3 1" mesh="sim_ecub_l_forearm_prt" />
+              <geom pos="0.0107785 -0.19826 0.0324758" quat="0.600977 -0.0557072 0.116385 0.788783" type="mesh"  contype="0" conaffinity="0" rgba="0.7 0.7 0.7 1" mesh="sim_ecub_l_wrist_1_prt" />
+              <geom pos="0.0107785 -0.19826 0.0324758" quat="0.600977 -0.0557072 0.116385 0.788783" type="mesh"  contype="0" conaffinity="0" rgba="1 0 1 1" mesh="sim_ecub_l_wrist_2_prt" />
+              <geom pos="0.0107785 -0.19826 0.0324758" quat="0.600977 -0.0557072 0.116385 0.788783" type="mesh"  contype="0" conaffinity="0" rgba="0 1 1 1" mesh="sim_ecub_l_hand_palm_prt" />
+              <geom pos="0.0107785 -0.19826 0.0324758" quat="0.600977 -0.0557073 0.116385 0.788783" type="mesh"  contype="0" conaffinity="0" rgba="0 1 0 1" mesh="sim_ecub_l_hand_ring_1_prt" />
+              <geom pos="0.0107784 -0.19826 0.0324758" quat="0.600977 -0.0557073 0.116385 0.788783" type="mesh"  contype="0" conaffinity="0" rgba="1 1 1 1" mesh="sim_ecub_l_hand_ring_2_prt" />
+              <geom pos="0.0107785 -0.19826 0.0324758" quat="0.600977 -0.0557072 0.116385 0.788783" type="mesh"  contype="0" conaffinity="0" rgba="0 0 0.8 1" mesh="sim_ecub_l_hand_index_1_prt" />
+              <geom pos="0.0107785 -0.19826 0.0324758" quat="0.600977 -0.0557072 0.116385 0.788783" type="mesh"  contype="0" conaffinity="0" rgba="0.1 0.8 0.1 1" mesh="sim_ecub_l_hand_index_2_prt" />
+              <geom pos="0.0107786 -0.19826 0.0324758" quat="0.600977 -0.0557072 0.116385 0.788783" type="mesh"  contype="0" conaffinity="0" mesh="sim_ecub_l_hand_index_3_prt" />
+              <geom pos="0.0107785 -0.19826 0.0324758" quat="0.600977 -0.0557072 0.116385 0.788783" type="mesh"  contype="0" conaffinity="0" rgba="0 1 0 1" mesh="sim_ecub_l_hand_middle_1_prt" />
+              <geom pos="0.0107785 -0.19826 0.0324758" quat="0.600977 -0.0557072 0.116385 0.788783" type="mesh"  contype="0" conaffinity="0" rgba="0 0 0 1" mesh="sim_ecub_l_hand_middle_2_prt" />
+              <geom pos="0.0107785 -0.19826 0.0324758" quat="0.600977 -0.0557072 0.116385 0.788783" type="mesh"  contype="0" conaffinity="0" rgba="1 0 0 1" mesh="sim_ecub_l_hand_thumb_1_prt" />
+              <geom pos="0.0107785 -0.19826 0.0324758" quat="-0.600977 0.0557072 -0.116385 -0.788783" type="mesh"  contype="0" conaffinity="0" rgba="0 0 1 1" mesh="sim_ecub_l_hand_thumb_2_prt" />
+              <geom pos="0.0107785 -0.19826 0.0324758" quat="-0.600977 0.0557072 -0.116385 -0.788783" type="mesh"  contype="0" conaffinity="0" rgba="1 1 0 1" mesh="sim_ecub_l_hand_thumb_3_prt" />
+              <geom pos="0.0107785 -0.19826 0.0324758" quat="0.600977 -0.0557073 0.116385 0.788783" type="mesh"  contype="0" conaffinity="0" rgba="1 0 1 1" mesh="sim_ecub_l_hand_pinkie_1_prt" />
+              <geom pos="0.0107786 -0.19826 0.0324758" quat="0.600977 -0.0557073 0.116385 0.788783" type="mesh"  contype="0" conaffinity="0" rgba="0 1 1 1" mesh="sim_ecub_l_hand_pinkie_2_prt" />
+            </body>
+          </body>
+        </body>
+      </body>
+    </body>
+  <geom name="floor" size="0 0 .05" type="plane" material="grid" condim="3" friction="1.0 0.01 0.002"  /></worldbody>
+<actuator>
+<motor name="r_hip_pitch" joint="r_hip_pitch" gear="1" ctrlrange="-100 100" />
+<motor name="r_hip_roll" joint="r_hip_roll" gear="1" ctrlrange="-100 100" />
+<motor name="r_hip_yaw" joint="r_hip_yaw" gear="1" ctrlrange="-100 100" />
+<motor name="r_knee" joint="r_knee" gear="1" ctrlrange="-100 100" />
+<motor name="r_ankle_pitch" joint="r_ankle_pitch" gear="1" ctrlrange="-100 100" />
+<motor name="r_ankle_roll" joint="r_ankle_roll" gear="1" ctrlrange="-100 100" />
+<motor name="l_hip_pitch" joint="l_hip_pitch" gear="1" ctrlrange="-100 100" />
+<motor name="l_hip_roll" joint="l_hip_roll" gear="1" ctrlrange="-100 100" />
+<motor name="l_hip_yaw" joint="l_hip_yaw" gear="1" ctrlrange="-100 100" />
+<motor name="l_knee" joint="l_knee" gear="1" ctrlrange="-100 100" />
+<motor name="l_ankle_pitch" joint="l_ankle_pitch" gear="1" ctrlrange="-100 100" />
+<motor name="l_ankle_roll" joint="l_ankle_roll" gear="1" ctrlrange="-100 100" />
+<motor name="r_shoulder_pitch" joint="r_shoulder_pitch" gear="1" ctrlrange="-100 100" />
+<motor name="r_shoulder_roll" joint="r_shoulder_roll" gear="1" ctrlrange="-100 100" />
+<motor name="r_shoulder_yaw" joint="r_shoulder_yaw" gear="1" ctrlrange="-100 100" />
+<motor name="r_elbow" joint="r_elbow" gear="1" ctrlrange="-100 100" />
+<motor name="l_shoulder_pitch" joint="l_shoulder_pitch" gear="1" ctrlrange="-100 100" />
+<motor name="l_shoulder_roll" joint="l_shoulder_roll" gear="1" ctrlrange="-100 100" />
+<motor name="l_shoulder_yaw" joint="l_shoulder_yaw" gear="1" ctrlrange="-100 100" />
+<motor name="l_elbow" joint="l_elbow" gear="1" ctrlrange="-100 100" />
+</actuator><asset><texture type="skybox" builtin="gradient" rgb1=".3 .5 .7" rgb2="0 0 0" width="32" height="512" /><texture name="body" type="cube" builtin="flat" mark="cross" rgb1="0.8 0.6 0.4" rgb2="0.8 0.6 0.4" width="127" height="1278" markrgb="1 1 1" random="0.01" /><texture name="grid" type="2d" builtin="checker" rgb1=".1 .2 .3" rgb2=".2 .3 .4" width="512" height="512" /><material name="body" texture="body" texuniform="true" rgba="0.8 0.6 .4 1" /><material name="grid" texture="grid" texrepeat="1 1" texuniform="true" reflectance=".2" /></asset></mujoco>
+
