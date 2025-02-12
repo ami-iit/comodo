@@ -4,7 +4,7 @@ import bipedal_locomotion_framework as blf
 import numpy as np
 import idyntree.bindings as iDynTree
 import manifpy
-
+from ankle_design.model_spu import AnkleSPU
 
 class TSIDController(Controller):
     def __init__(self, frequency, robot_model) -> None:
@@ -23,6 +23,14 @@ class TSIDController(Controller):
         self.max_number_contacts = 2
         self.number_fails = 0
         self.MAX_NUMBER_FAILS = 4
+        self.ankle = AnkleSPU(
+            xF1=-95.25e-3,
+            yF1=37.5e-3,
+            zF1=0,
+            zF=-355e-3,
+            xP1=-95.25e-3,
+            yP1=37.5e-3
+        )
         self.actuator1_bounds = [-30.0, 10.0]   # linear actuator: force [N]
         self.actuator2_bounds = [-20.0, 50.0]   # linear actuator: force [N]
         super().__init__(frequency, robot_model)
@@ -328,14 +336,11 @@ class TSIDController(Controller):
         self.l_ankle_torque_feasible_region_task.initialize(
             param_handler=self.l_ankle_torque_feasible_region_task_param_handler
         )
-        # Qui sostituisci la tua funzione
-        # l_foot_angles = [-0.2, 0.4] # NOTA: variabili nel tempo
-        # l_change_of_coords, l_lower_bound, l_upper_bound = ankle.compute_torque_feasible_region_matrices(
-        #     l_foot_angles, self.actuator1_bounds, self.actuator2_bounds
-        # )
-        l_change_of_coords = np.array([[1, 2], [0, 1]])
-        l_lower_bound = np.array([0, 0])
-        l_upper_bound = np.array([1, 1])
+
+        l_foot_angles = [-0.2, 0.4] # NOTA: variabili nel tempo
+        l_change_of_coords, l_lower_bound, l_upper_bound = self.ankle.compute_torque_feasible_region_matrices(
+            l_foot_angles, self.actuator1_bounds, self.actuator2_bounds
+        )
         self.l_ankle_torque_feasible_region_task.set_feasible_region(l_change_of_coords, l_lower_bound, l_upper_bound )
 
         ## Feasible Region Task - Right Ankle
@@ -360,14 +365,11 @@ class TSIDController(Controller):
         self.r_ankle_torque_feasible_region_task.initialize(
             param_handler=self.r_ankle_torque_feasible_region_task_param_handler
         )
-        # Qui sostituisci la tua funzione
-        # r_foot_angles = [-0.2, 0.4] # NOTA: variabili nel tempo
-        # r_change_of_coords, r_lower_bound, r_upper_bound = ankle.compute_torque_feasible_region_matrices(
-        #     r_foot_angles, self.actuator1_bounds, self.actuator2_bounds
-        # )
-        r_change_of_coords = np.array([[1, 2], [0, 1]])
-        r_lower_bound = np.array([0, 0])
-        r_upper_bound = np.array([1, 1])
+
+        r_foot_angles = [-0.2, 0.4] # NOTA: variabili nel tempo
+        r_change_of_coords, r_lower_bound, r_upper_bound = self.ankle.compute_torque_feasible_region_matrices(
+            r_foot_angles, self.actuator1_bounds, self.actuator2_bounds
+        )
         self.r_ankle_torque_feasible_region_task.set_feasible_region(r_change_of_coords, r_lower_bound, r_upper_bound)
 
 
