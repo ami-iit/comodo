@@ -18,8 +18,6 @@ class TSIDController(Controller):
         self.variable_name_left_contact = "lf_wrench"
         self.variable_name_right_contact = "rf_wrench"
         self.joint_torques_variable_name = "joint_torques"
-        self.l_ankle_torques_variable_name = "left_ankle_torques"
-        self.r_ankle_torques_variable_name = "right_ankle_torques"
         self.max_number_contacts = 2
         self.number_fails = 0
         self.MAX_NUMBER_FAILS = 4
@@ -33,6 +31,7 @@ class TSIDController(Controller):
         )
         self.actuator1_bounds = [-30.0, 10.0]   # linear actuator: force [N]
         self.actuator2_bounds = [-20.0, 50.0]   # linear actuator: force [N]
+        # self.s= np.zeros(self.robot_model.NDoF)
         super().__init__(frequency, robot_model)
 
     def define_kyndyn(self):
@@ -314,63 +313,59 @@ class TSIDController(Controller):
         self.root_link_task.set_kin_dyn(self.kindyn)
         self.root_link_task.initialize(param_handler=self.root_link_task_param_handler)
 
-        ## Feasible Region Task - Left Ankle
-        self.l_ankle_torque_feasible_region_task = blf.tsid.VariableFeasibleRegionTask()
-        self.l_ankle_torque_feasible_region_task_name = "l_ankle_torque_feasible_region_task"
-        self.l_ankle_torque_feasible_region_task_priority = 0
-        self.l_ankle_torque_feasible_region_task_param_handler = (
+        ## Feasible Region Task - All Joint Torques
+        self.joint_torque_feasible_region_task = blf.tsid.VariableFeasibleRegionTask()
+        self.joint_torque_feasible_region_task_name = "joint_torque_feasible_region_task"
+        self.joint_torque_feasible_region_task_priority = 0
+        self.joint_torque_feasible_region_task_param_handler = (
             blf.parameters_handler.StdParametersHandler()
         )
-        self.l_ankle_torque_feasible_region_task_param_handler.set_parameter_string(
+        self.joint_torque_feasible_region_task_param_handler.set_parameter_string(
             name="variable_name",
             value=self.joint_torques_variable_name,
         )
-        self.l_ankle_torque_feasible_region_task_param_handler.set_parameter_int(
+        self.joint_torque_feasible_region_task_param_handler.set_parameter_int(
             name="variable_size",
-            value=2
+            value=self.robot_model.NDoF
         )
-        self.l_ankle_torque_feasible_region_task_param_handler.set_parameter_vector_string(
-            name="elements_name",
-            value = ["l_ankle_roll_torque", "l_ankle_pitch_torque"]
+        self.joint_torque_feasible_region_task.initialize(
+            param_handler=self.joint_torque_feasible_region_task_param_handler
         )
-        self.l_ankle_torque_feasible_region_task.initialize(
-            param_handler=self.l_ankle_torque_feasible_region_task_param_handler
-        )
+        self.joint_torque_feasible_region_task.set_variables_handler(variables_handler=self.var_handler)
 
-        l_foot_angles = [-0.2, 0.4] # NOTA: variabili nel tempo
-        l_change_of_coords, l_lower_bound, l_upper_bound = self.ankle.compute_torque_feasible_region_matrices(
-            l_foot_angles, self.actuator1_bounds, self.actuator2_bounds
-        )
-        self.l_ankle_torque_feasible_region_task.set_feasible_region(l_change_of_coords, l_lower_bound, l_upper_bound )
+        C = np.eye(self.robot_model.NDoF)
+        l = np.array([-100] * self.robot_model.NDoF)
+        u = np.array([ 100] * self.robot_model.NDoF)
+        self.joint_torque_feasible_region_task.set_feasible_region(C, l, u)
 
-        ## Feasible Region Task - Right Ankle
-        self.r_ankle_torque_feasible_region_task = blf.tsid.VariableFeasibleRegionTask()
-        self.r_ankle_torque_feasible_region_task_name = "r_ankle_torque_feasible_region_task"
-        self.r_ankle_torque_feasible_region_task_priority = 0
-        self.r_ankle_torque_feasible_region_task_param_handler = (
-            blf.parameters_handler.StdParametersHandler()
-        )
-        self.r_ankle_torque_feasible_region_task_param_handler.set_parameter_string(
-            name="variable_name",
-            value=self.joint_torques_variable_name,
-        )
-        self.r_ankle_torque_feasible_region_task_param_handler.set_parameter_int(
-            name="variable_size",
-            value=2
-        )
-        self.r_ankle_torque_feasible_region_task_param_handler.set_parameter_vector_string(
-            name="elements_name",
-            value = ["r_ankle_roll_torque", "r_ankle_pitch_torque"]
-        )
-        self.r_ankle_torque_feasible_region_task.initialize(
-            param_handler=self.r_ankle_torque_feasible_region_task_param_handler
-        )
+        # ## Feasible Region Task - Right Ankle Torque
+        # self.r_ankle_torque_feasible_region_task = blf.tsid.VariableFeasibleRegionTask()
+        # self.r_ankle_torque_feasible_region_task_name = "r_ankle_torque_feasible_region_task"
+        # self.r_ankle_torque_feasible_region_task_priority = 0
+        # self.r_ankle_torque_feasible_region_task_param_handler = (
+        #     blf.parameters_handler.StdParametersHandler()
+        # )
+        # self.r_ankle_torque_feasible_region_task_param_handler.set_parameter_string(
+        #     name="variable_name",
+        #     value=self.joint_torques_variable_name,
+        # )
+        # self.r_ankle_torque_feasible_region_task_param_handler.set_parameter_int(
+        #     name="variable_size",
+        #     value=2
+        # )
+        # self.r_ankle_torque_feasible_region_task_param_handler.set_parameter_vector_string(
+        #     name="elements_name",
+        #     value = ["r_ankle_roll_torque", "r_ankle_pitch_torque"]
+        # )
+        # self.r_ankle_torque_feasible_region_task.initialize(
+        #     param_handler=self.r_ankle_torque_feasible_region_task_param_handler
+        # )
 
-        r_foot_angles = [-0.2, 0.4] # NOTA: variabili nel tempo
-        r_change_of_coords, r_lower_bound, r_upper_bound = self.ankle.compute_torque_feasible_region_matrices(
-            r_foot_angles, self.actuator1_bounds, self.actuator2_bounds
-        )
-        self.r_ankle_torque_feasible_region_task.set_feasible_region(r_change_of_coords, r_lower_bound, r_upper_bound)
+        # r_foot_angles = [-0.2, 0.4]
+        # r_change_of_coords, r_lower_bound, r_upper_bound = self.ankle.compute_torque_feasible_region_matrices(
+        #     r_foot_angles, self.actuator1_bounds, self.actuator2_bounds
+        # )
+        # self.r_ankle_torque_feasible_region_task.set_feasible_region(r_change_of_coords, r_lower_bound, r_upper_bound)
 
 
         ## Add tasks to the controller
@@ -419,16 +414,11 @@ class TSIDController(Controller):
             self.root_link_task_priority,
             self.root_link_task_weigth,
         )
-        # self.controller.add_task(
-        #     self.l_ankle_torque_feasible_region_task,
-        #     self.l_ankle_torque_feasible_region_task_name,
-        #     self.l_ankle_torque_feasible_region_task_priority,
-        # )
-        # self.controller.add_task(
-        #     self.r_ankle_torque_feasible_region_task,
-        #     self.r_ankle_torque_feasible_region_task_name,
-        #     self.r_ankle_torque_feasible_region_task_priority,
-        # )
+        self.controller.add_task(
+            self.joint_torque_feasible_region_task,
+            self.joint_torque_feasible_region_task_name,
+            self.joint_torque_feasible_region_task_priority,
+        )
         self.controller.finalize(self.var_handler)
 
     def run(self):
@@ -567,6 +557,13 @@ class TSIDController(Controller):
             manif_rot, manifpy.SO3Tangent.Zero(), manifpy.SO3Tangent.Zero()
         )
         self.angular_momentum_task.set_set_point(np.zeros(3), np.zeros(3))
+
+    # def update_feasible_region_torque(self):
+    #     r_foot_angles = [self.s[5], self.s[4]]
+    #     r_change_of_coords, r_lower_bound, r_upper_bound = self.ankle.compute_torque_feasible_region_matrices(
+    #         r_foot_angles, self.actuator1_bounds, self.actuator2_bounds
+    #     )
+    #     self.r_ankle_torque_feasible_region_task.set_feasible_region(r_change_of_coords, r_lower_bound, r_upper_bound)
 
     def set_state(self, s, s_dot, t):
         self.s = s
