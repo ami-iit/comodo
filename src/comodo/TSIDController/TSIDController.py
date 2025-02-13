@@ -30,8 +30,8 @@ class TSIDController(Controller):
             xP1=-95.25e-3,
             yP1=37.5e-3
         )
-        self.actuator1_bounds = [-370.0, 370.0]  # linear actuator: force [N]
-        self.actuator2_bounds = [-370.0, 370.0]  # linear actuator: force [N]
+        self.actuator1_bounds = [-300.0, 300.0]  # linear actuator: force [N]
+        self.actuator2_bounds = [-300.0, 300.0]  # linear actuator: force [N]
         self.joint_torque_transf_matrix = np.eye(robot_model.NDoF)
         self.joint_torque_lower_bound = np.ones((robot_model.NDoF, 1)) * -np.inf  # rotative actuator: torque [Nm]
         self.joint_torque_upper_bound = np.ones((robot_model.NDoF, 1)) *  np.inf  # rotative actuator: torque [Nm]
@@ -562,11 +562,15 @@ class TSIDController(Controller):
         self.angular_momentum_task.set_set_point(np.zeros(3), np.zeros(3))
 
     def update_joint_torque_feasible_region(self):
+        # I need this matrix because the order of ankle_roll and ankle_pitch in comodo
+        # is inverted compared to the one considered in ankle_design
+        swap_matrix = np.array([[0, 1], [1, 0]])
+
         l_foot_angles = [self.s[11], self.s[10]]
         l_transf_matrix, l_lower_bound, l_upper_bound = self.ankle.compute_torque_feasible_region_matrices(
            l_foot_angles, self.actuator1_bounds, self.actuator2_bounds
         )
-        self.joint_torque_transf_matrix[10:12, 10:12] = l_transf_matrix
+        self.joint_torque_transf_matrix[10:12, 10:12] = l_transf_matrix @ swap_matrix
         self.joint_torque_lower_bound[10:12] = l_lower_bound
         self.joint_torque_upper_bound[10:12] = l_upper_bound
 
@@ -574,7 +578,7 @@ class TSIDController(Controller):
         r_transf_matrix, r_lower_bound, r_upper_bound = self.ankle.compute_torque_feasible_region_matrices(
            r_foot_angles, self.actuator1_bounds, self.actuator2_bounds
         )
-        self.joint_torque_transf_matrix[4:6, 4:6] = r_transf_matrix
+        self.joint_torque_transf_matrix[4:6, 4:6] = r_transf_matrix @ swap_matrix
         self.joint_torque_lower_bound[4:6] = r_lower_bound
         self.joint_torque_upper_bound[4:6] = r_upper_bound
 
