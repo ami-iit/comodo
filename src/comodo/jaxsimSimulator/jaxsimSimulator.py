@@ -12,7 +12,7 @@ import jaxsim.api as js
 import jaxsim.rbda.contacts
 import numpy as np
 import numpy.typing as npt
-from jaxsim import VelRepr, integrators
+from jaxsim import VelRepr
 from jaxsim.mujoco import MujocoVideoRecorder
 from jaxsim.mujoco.loaders import UrdfToMjcf
 from jaxsim.mujoco.model import MujocoModelHelper
@@ -66,7 +66,7 @@ class JaxsimSimulator(Simulator):
 
         # Step aux dict.
         # This is used only for variable-step integrators.
-        self._step_aux_dict: dict[str, Any]= {}
+        self._step_aux_dict: dict[str, Any] = {}
 
         # Time step for the simulation
         self._dt: float = dt
@@ -172,18 +172,6 @@ class JaxsimSimulator(Simulator):
                     f"Invalid contact model type: {self._contact_model_type}"
                 )
 
-        model = js.model.JaxSimModel.build_from_model_description(
-            model_description=robot_model.urdf_string,
-            model_name=robot_model.robot_name,
-            contact_model=contact_model,
-            time_step=self._dt,
-        )
-
-        self._model = js.model.reduce(
-            model=model,
-            considered_joints=tuple(robot_model.joint_name_list),
-        )
-
         if contact_params is None:
             match self._contact_model_type:
                 case JaxsimContactModelEnum.RIGID:
@@ -207,6 +195,19 @@ class JaxsimSimulator(Simulator):
                         f"Invalid contact model type: {self._contact_model_type}"
                     )
 
+        model = js.model.JaxSimModel.build_from_model_description(
+            model_description=robot_model.urdf_string,
+            model_name=robot_model.robot_name,
+            contact_model=contact_model,
+            contact_params=contact_params,
+            time_step=self._dt,
+        )
+
+        self._model = js.model.reduce(
+            model=model,
+            considered_joints=tuple(robot_model.joint_name_list),
+        )
+
         # Find mapping between user provided joint name list and JaxSim one
         user_joint_names = robot_model.joint_name_list
         js_joint_names = self._model.joint_names()
@@ -223,7 +224,6 @@ class JaxsimSimulator(Simulator):
             base_position=jnp.array(xyz_rpy[:3]),
             base_quaternion=jnp.array(JaxsimSimulator._RPY_to_quat(*xyz_rpy[3:])),
             joint_positions=jnp.array(s),
-            contacts_params=contact_params,
         )
 
         # Initialize tau to zero
@@ -306,10 +306,9 @@ class JaxsimSimulator(Simulator):
 
             if self._contact_model_type is JaxsimContactModelEnum.VISCO_ELASTIC:
 
-                self._data, _ = jaxsim.rbda.contacts.visco_elastic.step(
+                self._data = jaxsim.rbda.contacts.visco_elastic.step(
                     model=self._model,
                     data=self._data,
-                    dt=self._dt,
                     link_forces=None,
                     joint_force_references=self._tau,
                 )
@@ -317,15 +316,11 @@ class JaxsimSimulator(Simulator):
             else:
 
                 # All other contact models
-                self._data, self._step_aux_dict = js.model.step(
+                self._data = js.model.step(
                     model=self._model,
                     data=self._data,
-                    dt=self._dt,
-                    link_forces=None,
+                    # link_forces=None,
                     joint_force_references=self._tau,
-                    integrator_metadata=self._step_aux_dict.get(
-                        "integrator_metadata", None
-                    ),
                 )
 
             if not dry_run:
@@ -351,10 +346,10 @@ class JaxsimSimulator(Simulator):
 
             with self._data.switch_velocity_representation(VelRepr.Mixed):
 
-                self._link_contact_forces = js.model.link_contact_forces(
+                self._link_contact_forces = js.contact_model.link_contact_forces(
                     model=self._model,
                     data=self._data,
-                    joint_force_references=self._tau,
+                    joint_torques=self._tau,
                 )
 
     def get_state(self) -> tuple[npt.NDArray, npt.NDArray, npt.NDArray]:
@@ -374,8 +369,8 @@ class JaxsimSimulator(Simulator):
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
 
-        s = np.array(self._data.joint_positions())[self._to_user]
-        s_dot = np.array(self._data.joint_velocities())[self._to_user]
+        s = np.array(self._data.joint_positions)[self._to_user]
+        s_dot = np.array(self._data.joint_velocities)[self._to_user]
         tau = np.array(self._tau)[self._to_user]
 
         return s, s_dot, tau
@@ -405,7 +400,7 @@ class JaxsimSimulator(Simulator):
         assert (
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
-        return np.array(self._data.base_transform())
+        return np.array(self._data.base_transform)
 
     @property
     def base_velocity(self) -> npt.NDArray:
@@ -413,7 +408,7 @@ class JaxsimSimulator(Simulator):
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
         with self._data.switch_velocity_representation(VelRepr.Mixed):
-            return np.array(self._data.base_velocity())
+            return np.array(self._data.base_velocity)
 
     @property
     def simulation_time(self) -> float:
@@ -492,7 +487,7 @@ class JaxsimSimulator(Simulator):
             self._is_initialized
         ), "Simulator is not initialized, call load_model first."
 
-        self._data = self._data.replace(contacts_params=params)
+        self._model = self._model.replace(contacts_params=params)
 
     # ==== Private methods ====
 
@@ -528,26 +523,26 @@ class JaxsimSimulator(Simulator):
             self._handle = self._viz.open_viewer()
 
         self._mj_model_helper.set_base_position(
-            position=np.array(self._data.base_position()),
+            position=np.array(self._data.base_position),
         )
         self._mj_model_helper.set_base_orientation(
-            orientation=np.array(self._data.base_orientation()),
+            orientation=np.array(self._data.base_orientation),
         )
         self._mj_model_helper.set_joint_positions(
-            positions=np.array(self._data.joint_positions()),
+            positions=np.array(self._data.joint_positions),
             joint_names=self._model.joint_names(),
         )
         self._viz.sync(viewer=self._handle)
 
     def _record_frame(self) -> None:
         self._mj_model_helper.set_base_position(
-            position=np.array(self._data.base_position()),
+            position=np.array(self._data.base_position),
         )
         self._mj_model_helper.set_base_orientation(
-            orientation=np.array(self._data.base_orientation()),
+            orientation=np.array(self._data.base_orientation),
         )
         self._mj_model_helper.set_joint_positions(
-            positions=np.array(self._data.joint_positions()),
+            positions=np.array(self._data.joint_positions),
             joint_names=self._model.joint_names(),
         )
 
