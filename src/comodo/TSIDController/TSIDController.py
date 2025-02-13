@@ -21,6 +21,7 @@ class TSIDController(Controller):
         self.max_number_contacts = 2
         self.number_fails = 0
         self.MAX_NUMBER_FAILS = 4
+        self.s = np.zeros(robot_model.NDoF)
         self.ankle = AnkleSPU(
             xF1=-95.25e-3,
             yF1=37.5e-3,
@@ -29,9 +30,11 @@ class TSIDController(Controller):
             xP1=-95.25e-3,
             yP1=37.5e-3
         )
-        self.actuator1_bounds = [-30.0, 10.0]   # linear actuator: force [N]
-        self.actuator2_bounds = [-20.0, 50.0]   # linear actuator: force [N]
-        # self.s= np.zeros(self.robot_model.NDoF)
+        self.actuator1_bounds = [-370.0, 370.0]  # linear actuator: force [N]
+        self.actuator2_bounds = [-370.0, 370.0]  # linear actuator: force [N]
+        self.joint_torque_transf_matrix = np.eye(robot_model.NDoF)
+        self.joint_torque_lower_bound = np.ones((robot_model.NDoF, 1)) * -np.inf  # rotative actuator: torque [Nm]
+        self.joint_torque_upper_bound = np.ones((robot_model.NDoF, 1)) *  np.inf  # rotative actuator: torque [Nm]
         super().__init__(frequency, robot_model)
 
     def define_kyndyn(self):
@@ -333,10 +336,10 @@ class TSIDController(Controller):
         )
         self.joint_torque_feasible_region_task.set_variables_handler(variables_handler=self.var_handler)
 
-        C = np.eye(self.robot_model.NDoF)
-        l = np.array([-100] * self.robot_model.NDoF)
-        u = np.array([ 100] * self.robot_model.NDoF)
-        self.joint_torque_feasible_region_task.set_feasible_region(C, l, u)
+        self.joint_torque_feasible_region_task.set_feasible_region(
+            self.joint_torque_transf_matrix,
+            self.joint_torque_lower_bound,
+            self.joint_torque_upper_bound)
 
         # ## Feasible Region Task - Right Ankle Torque
         # self.r_ankle_torque_feasible_region_task = blf.tsid.VariableFeasibleRegionTask()
@@ -558,12 +561,27 @@ class TSIDController(Controller):
         )
         self.angular_momentum_task.set_set_point(np.zeros(3), np.zeros(3))
 
-    # def update_feasible_region_torque(self):
-    #     r_foot_angles = [self.s[5], self.s[4]]
-    #     r_change_of_coords, r_lower_bound, r_upper_bound = self.ankle.compute_torque_feasible_region_matrices(
-    #         r_foot_angles, self.actuator1_bounds, self.actuator2_bounds
-    #     )
-    #     self.r_ankle_torque_feasible_region_task.set_feasible_region(r_change_of_coords, r_lower_bound, r_upper_bound)
+    def update_joint_torque_feasible_region(self):
+        l_foot_angles = [self.s[11], self.s[10]]
+        l_transf_matrix, l_lower_bound, l_upper_bound = self.ankle.compute_torque_feasible_region_matrices(
+           l_foot_angles, self.actuator1_bounds, self.actuator2_bounds
+        )
+        self.joint_torque_transf_matrix[10:12, 10:12] = l_transf_matrix
+        self.joint_torque_lower_bound[10:12] = l_lower_bound
+        self.joint_torque_upper_bound[10:12] = l_upper_bound
+
+        r_foot_angles = [self.s[5], self.s[4]]
+        r_transf_matrix, r_lower_bound, r_upper_bound = self.ankle.compute_torque_feasible_region_matrices(
+           r_foot_angles, self.actuator1_bounds, self.actuator2_bounds
+        )
+        self.joint_torque_transf_matrix[4:6, 4:6] = r_transf_matrix
+        self.joint_torque_lower_bound[4:6] = r_lower_bound
+        self.joint_torque_upper_bound[4:6] = r_upper_bound
+
+        self.joint_torque_feasible_region_task.set_feasible_region(
+            self.joint_torque_transf_matrix,
+            self.joint_torque_lower_bound,
+            self.joint_torque_upper_bound)
 
     def set_state(self, s, s_dot, t):
         self.s = s

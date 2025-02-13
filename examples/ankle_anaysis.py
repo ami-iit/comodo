@@ -194,8 +194,8 @@ def compute_fitness(pygadClass, x_k, idx):
         com, dcom,forces_left, forces_right, ang_mom = mpc.get_references()
         left_foot, right_foot = mpc.contact_planner.get_references_swing_foot_planner()
         TSID_controller_instance.update_task_references_mpc(com=com, dcom=dcom,ddcom=np.zeros(3),left_foot_desired=left_foot, right_foot_desired=right_foot,s_desired=np.array(s_des), wrenches_left = forces_left, wrenches_right = forces_right)
-        # TSID_controller_instance.update_l_ankle_torque_feasible_region()
-        # TSID_controller_instance.updare_r_ankle_torque_feasible_region()
+        TSID_controller_instance.update_joint_torque_feasible_region()
+
         succeded_controller = TSID_controller_instance.run()
 
         feet_normal, misalignment_feet = mujoco_instance.check_feet_status(s, H_b)
