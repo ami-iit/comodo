@@ -23,15 +23,17 @@ class TSIDController(Controller):
         self.MAX_NUMBER_FAILS = 4
         self.s = np.zeros(robot_model.NDoF)
         self.ankle = AnkleSPU(
-            xF1=-95.25e-3,
-            yF1=37.5e-3,
-            zF1=0,
-            zF=-355e-3,
-            xP1=-95.25e-3,
-            yP1=37.5e-3
+            xF1=-67.0e-3,
+            yF1=50.0e-3,
+            zF1=60.0e-3,
+            zF=-449e-3,
+            xP1=-58.0e-3,
+            yP1=40.0e-3
         )
-        self.actuator1_bounds = [-300.0, 300.0]  # linear actuator: force [N]
-        self.actuator2_bounds = [-300.0, 300.0]  # linear actuator: force [N]
+
+        force_max = 260.0 # [N]
+        self.actuator1_bounds = [-force_max, force_max]
+        self.actuator2_bounds = [-force_max, force_max]
         self.joint_torque_transf_matrix = np.eye(robot_model.NDoF)
         self.joint_torque_lower_bound = np.ones((robot_model.NDoF, 1)) * -np.inf  # rotative actuator: torque [Nm]
         self.joint_torque_upper_bound = np.ones((robot_model.NDoF, 1)) *  np.inf  # rotative actuator: torque [Nm]
