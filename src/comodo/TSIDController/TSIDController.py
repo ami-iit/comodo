@@ -27,11 +27,11 @@ class TSIDController(Controller):
             yF1=50.0e-3,
             zF1=60.0e-3,
             zF=-449e-3,
-            xP1=-58.0e-3,
+            xP1=58.0e-3,
             yP1=40.0e-3
         )
 
-        force_max = 260.0 # [N]
+        force_max = 250.0 # [N]
         self.actuator1_bounds = [-force_max, force_max]
         self.actuator2_bounds = [-force_max, force_max]
         self.joint_torque_transf_matrix = np.eye(robot_model.NDoF)
